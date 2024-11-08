@@ -16,32 +16,3 @@ Ready to run in production? Please [check our deployment guides](https://hexdocs
   * Docs: https://hexdocs.pm/phoenix
   * Forum: https://elixirforum.com/c/phoenix-forum
   * Source: https://github.com/phoenixframework/phoenix
-
-PARADIGMS-CLASS-PROJECT/
-├── _build/
-├── assets/
-│   ├── css/
-│   └── js/
-├── config/
-├── lib/
-│   ├── game_app/
-│   │   ├── lobby_manager.ex        # GenServer for lobby management
-│   │   ├── matchmaker.ex           # GenServer for matchmaking
-│   │   └── game_server.ex          # Additional game logic (if needed)
-│   └── game_app_web/
-│       ├── channels/
-│       │   ├── game_channel.ex      # Phoenix Channel for game events
-│       │   └── chat_channel.ex      # Phoenix Channel for in-game chat
-│       ├── live/
-│       │   └── lobby_live.ex       # LiveView for lobby and matchmaking UI
-│       └── templates/
-│           └── live/
-│               └── lobby_live.html.heex # HTML template for lobby UI
-├── priv/
-├── test/
-│   ├── game_app/
-│   │   ├── lobby_manager_test.exs   # Tests for lobby management
-│   │   ├── matchmaker_test.exs      # Tests for matchmaking
-│   └── game_app_web/
-│       └── live/
-│           └── lobby_live_test.exs  # Tests for LobbyLive LiveView
