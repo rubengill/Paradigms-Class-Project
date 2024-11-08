@@ -5,7 +5,7 @@ defmodule TermProjectWeb.GameChannel do
 
   use Phoenix.Channel
 
-  alias TermProject.Game
+  alias TermProject.Game.LobbyManager
 
   def join("game:lobby", _message, socket) do
     player_id = assign_player_id(socket)
@@ -21,10 +21,24 @@ defmodule TermProjectWeb.GameChannel do
   end
 
   # TODO: Handle other incoming messages (e.g., resource management, chat messages)
+  def handle_in("chat_message", %{"message" => message}, socket) do
+    player_id = socket.assigns.player_id
+    broadcast!(socket, "chat_message", %{player_id: player_id, message: message})
+    {:noreply, socket}
+  end
+
+  def handle_in("collect_resource", %{"resource_type" => resource_type}, socket) do
+    player_id = socket.assigns.player_id
+    case Game.collect_resource(player_id, String.to_existing_atom(resource_type)) do
+      :ok -> {:noreply, socket}
+      {:error, reason} -> {:reply, {:error, reason}, socket}
+    end
+  end
 
   # Helper function to assign player IDs
-  defp assign_player_id(socket) do
+  defp assign_player_id(_socket) do
     # TODO: Implement proper player identification and authentication
-    :erlang.phash2(socket.transport_pid)
+    # :erlang.phash2(socket.transport_pid)
+    UUID.uuid4()  # Generates a unique player ID
   end
 end

@@ -1,0 +1,17 @@
+<div>
+  <h1>Lobby System</h1>
+  <button phx-click="find_match">Find Match</button>
+
+  <h2>Create Lobby</h2>
+  <form phx-submit="create_lobby">
+    <input type="text" name="lobby_name" placeholder="Lobby Name" />
+    <button type="submit">Create</button>
+  </form>
+
+  <h2>Available Lobbies</h2>
+  <ul>
+    <%= for lobby <- @lobbies do %>
+      <li><%= lobby %></li>
+    <% end %>
+  </ul>
+</div>
