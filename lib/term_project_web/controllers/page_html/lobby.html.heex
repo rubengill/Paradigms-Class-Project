@@ -1,0 +1,22 @@
+<div>
+  <h1>Lobby</h1>
+
+  <h2>Create Lobby</h2>
+  <form action={~p"/lobby/create"} method="post">
+    <input type="text" name="lobby_name" placeholder="Lobby name" value={@lobby_name} />
+    <button type="submit">Create Lobby</button>
+  </form>
+
+  <h2>Available Lobbies</h2>
+  <ul>
+    <%= for lobby <- @lobbies do %>
+      <li>
+        <%= lobby %>
+        <form action={~p"/lobby/join"} method="post" style="display:inline;">
+          <input type="hidden" name="lobby_name" value={lobby} />
+          <button type="submit">Join</button>
+        </form>
+      </li>
+    <% end %>
+  </ul>
+</div>

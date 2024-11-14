@@ -1,32 +1,34 @@
-defmodule TermProject.Game.Matchmaker do
+defmodule GameApp.Matchmaker do
   use GenServer
 
-  def start_link(_) do
+  def start_link(_opts) do
     GenServer.start_link(__MODULE__, %{queue: []}, name: __MODULE__)
   end
 
+  @impl true
   def init(initial_state) do
     {:ok, initial_state}
   end
 
-  def add_to_queue(player_id) do
-    GenServer.call(__MODULE__, {:add_to_queue, player_id})
+  def add_to_queue(player_pid) do
+    GenServer.cast(__MODULE__, {:add_to_queue, player_pid})
   end
 
-  def handle_call({:add_to_queue, player_id}, _from, state) do
-    new_queue = state.queue ++ [player_id]
-    # Check if we have enough players to create a match
+  @impl true
+  def handle_cast({:add_to_queue, player_pid}, %{queue: queue} = state) do
+    new_queue = [player_pid | queue]
+
     if length(new_queue) >= 2 do
       [p1, p2 | rest] = new_queue
-      # Pair players p1 and p2
-      broadcast_match(p1, p2)
-      {:reply, :ok, %{state | queue: rest}}
+      start_match(p1, p2)
+      {:noreply, %{state | queue: rest}}
     else
-      {:reply, :ok, %{state | queue: new_queue}}
+      {:noreply, %{state | queue: new_queue}}
     end
   end
 
-  defp broadcast_match(p1, p2) do
-    Phoenix.PubSub.broadcast(TermProject.PubSub, "matchmaking", {:match_found, p1, p2})
+  defp start_match(p1, p2) do
+    send(p1, {:match_found, p2})
+    send(p2, {:match_found, p1})
   end
 end

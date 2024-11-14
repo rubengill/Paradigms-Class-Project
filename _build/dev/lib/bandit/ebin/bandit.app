@@ -1,5 +1,5 @@
 {application,bandit,
-             [{config_mtime,1730837480},
+             [{config_mtime,1731438557},
               {optional_applications,[]},
               {applications,[kernel,stdlib,elixir,logger,thousand_island,plug,
                              websock,hpax,telemetry]},

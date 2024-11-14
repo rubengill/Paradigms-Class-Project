@@ -104,6 +104,37 @@ defmodule TermProjectWeb do
     end
   end
 
+  def view do
+    quote do
+      use Phoenix.View,
+        root: "lib/term_project_web/templates",
+        namespace: TermProjectWeb
+
+      unquote(view_helpers())
+    end
+  end
+
+  defp view_helpers do
+    quote do
+      # Use all HTML functionality
+      use Phoenix.HTML
+
+      # Import basic rendering functionality
+      import Phoenix.View
+
+      # Import convenience functions from controllers
+      import Phoenix.Controller,
+        only: [get_flash: 1, get_flash: 2, view_module: 1, view_template: 1]
+
+      # Import error helpers and Gettext
+      import TermProjectWeb.ErrorHelpers
+      import TermProjectWeb.Gettext
+
+      # Alias the Routes module
+      alias TermProjectWeb.Router.Helpers, as: Routes
+    end
+  end
+
   @doc """
   When used, dispatch to the appropriate controller/live_view/etc.
   """

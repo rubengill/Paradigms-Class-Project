@@ -7,6 +7,8 @@ defmodule TermProject.Application do
 
   def start(_type, _args) do
     children = [
+      # Start the Ecto repository
+      TermProject.Repo,
       # Start the Telemetry supervisor
       TermProjectWeb.Telemetry,
       # Start the PubSub system

@@ -37,6 +37,13 @@ defmodule TermProject.Accounts do
   """
   def get_user!(id), do: Repo.get!(User, id)
 
+  # Register a new user
+  def register_user(attrs) do
+    %User{}
+    |> User.changeset(attrs)
+    |> Repo.insert()
+  end
+
   @doc """
   Creates a user.
 
@@ -100,5 +107,15 @@ defmodule TermProject.Accounts do
   """
   def change_user(%User{} = user, attrs \\ %{}) do
     User.changeset(user, attrs)
+  end
+
+  def authenticate_user(username, password) do
+    user = Repo.get_by(User, username: username)
+
+    if user && Bcrypt.check_pass(user, password) do
+      {:ok, user}
+    else
+      {:error, :invalid_credentials}
+    end
   end
 end
