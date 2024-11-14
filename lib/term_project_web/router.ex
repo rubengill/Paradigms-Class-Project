@@ -29,6 +29,7 @@ defmodule TermProjectWeb.Router do
 
     get "/login", SessionController, :new
     post "/login", SessionController, :create
+    post "/guest_login", SessionController, :guest_login
     delete "/logout", SessionController, :delete
 
     get "/register", RegistrationController, :new

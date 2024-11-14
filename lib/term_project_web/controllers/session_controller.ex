@@ -23,6 +23,15 @@ defmodule TermProjectWeb.SessionController do
     end
   end
 
+  # Handle guest login
+  def guest_login(conn, %{"guest_username" => guest_username}) do
+    # Optionally, you can check if the username is already taken by a registered user
+    conn
+    |> put_session(:guest_username, guest_username)
+    |> put_flash(:info, "Logged in as guest.")
+    |> redirect(to: ~p"/lobby")
+  end
+
   # Logout action
   def delete(conn, _params) do
     conn
