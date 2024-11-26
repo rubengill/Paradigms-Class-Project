@@ -1,8 +1,5 @@
 @import "tailwindcss/base";
 @import "tailwindcss/components";
 @import "tailwindcss/utilities";
-@import "./lobby.css";
-@import "./homepage.css";
-
 
 /* This file is for your main application CSS */

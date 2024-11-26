@@ -6,7 +6,7 @@ defmodule TermProjectWeb.Router do
     plug :fetch_session
     plug :fetch_live_flash
     plug :put_root_layout, html: {TermProjectWeb.Layouts, :root}
-    # plug :protect_from_forgery
+    plug :protect_from_forgery
     plug :put_secure_browser_headers
   end
 
@@ -17,23 +17,11 @@ defmodule TermProjectWeb.Router do
   scope "/", TermProjectWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
+    live "/", LobbyLive, :index
+    live "/lobby/:id", LobbyRoomLive, :show
 
-    # live "/lobby", LobbyLive, :index
-    # live "/login", LoginLive, :index
-    # live "/register", RegisterLive, :index
-
-    get "/lobby", LobbyController, :index
-    post "/lobby/create", LobbyController, :create
-    post "/lobby/join", LobbyController, :join
-
-    get "/login", SessionController, :new
-    post "/login", SessionController, :create
-    post "/guest_login", SessionController, :guest_login
-    delete "/logout", SessionController, :delete
-
-    get "/register", RegistrationController, :new
-    post "/register", RegistrationController, :create
+    live "/register", RegistrationLive, :new
+    live "/login", LoginLive, :new
   end
 
   # Other scopes may use custom stacks.

@@ -16,7 +16,7 @@ defmodule TermProject.Application do
       # Start the Endpoint (http/https)
       TermProjectWeb.Endpoint,
       # Start the Game server
-      TermProject.Game.LobbyManager
+      TermProject.Game.LobbyServer
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html for strategies and options

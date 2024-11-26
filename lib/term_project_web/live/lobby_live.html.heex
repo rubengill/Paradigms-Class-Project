@@ -1,0 +1,165 @@
+<div class="container">
+  <h1 class="page-title">Game Lobbies</h1>
+
+    <div class="create-lobby-section">
+    <h2>Create New Lobby</h2>
+    <form phx-submit="create_lobby" class="create-lobby-form">
+      <div class="form-group">
+        <label>Maximum Players:</label>
+        <select name="max_players" class="select-input">
+          <%= for n <- 1..4 do %>
+            <option value={"#{n}"}><%= n %> Player<%= if n > 1, do: "s" %></option>
+          <% end %>
+        </select>
+      </div>
+      <button type="submit" class="create-button">Create Lobby</button>
+      <button phx-click="matchmaking" class="matchmaking-button">Matchmaking</button>
+    </form>
+  </div>
+
+  <div class="lobby-list">
+    <%= for lobby <- @lobbies do %>
+      <div class="lobby-card">
+        <div class="lobby-info">
+          <h3>Lobby #<%= lobby.id %></h3>
+          <p class="player-count">
+            Players: <span class="count"><%= map_size(lobby.players) %>/<%= lobby.max_players %></span>
+          </p>
+        </div>
+        <.link class="join-button" navigate={~p"/lobby/#{lobby.id}?username=#{URI.encode(@username)}"}>Join</.link>
+      </div>
+    <% end %>
+  </div>
+
+
+</div>
+
+<style>
+  .container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem;
+  }
+
+  .page-title {
+    color: #2d3748;
+    font-size: 2.5rem;
+    margin-bottom: 2rem;
+    text-align: center;
+  }
+
+  .lobby-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+
+  .lobby-card {
+    background: white;
+    border-radius: 8px;
+    padding: 1rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border: 1px solid #e2e8f0;
+  }
+
+  .lobby-info {
+    flex: 1;
+  }
+
+  .lobby-info h3 {
+    color: #2d3748;
+    margin: 0 0 0.5rem 0;
+  }
+
+  .player-count {
+    color: #4a5568;
+    font-size: 0.9rem;
+  }
+
+  .count {
+    font-weight: bold;
+    color: #2b6cb0;
+  }
+
+  .join-button {
+    background: #4299e1;
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    text-align: center;
+    text-decoration: none;
+    transition: background-color 0.2s;
+    font-size: 0.875rem;
+    white-space: nowrap;
+    margin-left: 1rem;
+  }
+
+  .join-button:hover {
+    background: #2b6cb0;
+  }
+
+  .create-lobby-section {
+    max-width: 400px;
+    margin: 0 auto;
+    padding: 2rem;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e2e8f0;
+  }
+
+  .create-lobby-section h2 {
+    color: #2d3748;
+    margin-bottom: 1.5rem;
+    text-align: center;
+  }
+
+  .create-lobby-form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+
+  .select-input {
+    padding: 0.5rem;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    font-size: 1rem;
+  }
+
+  .create-button {
+    background: #48bb78;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+
+  .create-button:hover {
+    background: #38a169;
+  }
+
+  .matchmaking-button{
+    background: #bb4848;
+    color: white;
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 4px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+</style>
