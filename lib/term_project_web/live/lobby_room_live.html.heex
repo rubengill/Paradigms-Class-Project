@@ -46,6 +46,18 @@ document.addEventListener('DOMContentLoaded', function () {
 <div class="lobby-container">
   <h1 class="lobby-title">Lobby #<%= @lobby.id %></h1>
 
+  <%= if @need_password do %>
+    <div class="password-prompt">
+      <h2>This lobby is Password-Protected.</h2>
+      <form phx-submit="submit_password">
+        <div class="form-group">
+          <label>Password:</label>
+          <input type="password" name="password" required />
+        </div>
+        <button type="submit" class="join-button">Join Lobby</button>
+      </form>
+    </div>
+  <% else %>
     <div class="player-section">
       <div class="welcome-message">
         <h2>Welcome, <%= @username %>!</h2>
@@ -80,6 +92,7 @@ document.addEventListener('DOMContentLoaded', function () {
         </div>
       </div>
     </div>
+  <% end %>
 </div>
 
 <div id="chat-container">

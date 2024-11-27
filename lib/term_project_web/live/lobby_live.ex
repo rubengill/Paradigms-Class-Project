@@ -2,18 +2,37 @@ defmodule TermProjectWeb.LobbyLive do
   use TermProjectWeb, :live_view
 
   def mount(params, _session, socket) do
-    username = params["username"]
+    username = params["username"] || socket.assigns[:username]
 
-    if connected?(socket), do: Phoenix.PubSub.subscribe(TermProject.PubSub, "lobbies")
-    {:ok, assign(socket, lobbies: TermProject.Game.LobbyServer.list_lobbies(), username: username)}
+    if is_nil(username) do
+      # Redirect or prompt the user to enter their username
+      {:ok, redirect(socket, to: "/login")}
+    else
+      if connected?(socket), do: Phoenix.PubSub.subscribe(TermProject.PubSub, "lobbies")
+      {:ok, assign(socket, lobbies: TermProject.Game.LobbyServer.list_lobbies(), username: username)}
+    end
   end
 
-  def handle_event("create_lobby", %{"max_players" => max_players}, socket) do
-    username = socket.assigns.username
-    {:ok, lobby_id} = TermProject.Game.LobbyServer.create_lobby(String.to_integer(max_players))
-    :ok = TermProject.Game.LobbyServer.join_lobby(lobby_id, username)
-    {:noreply, redirect(socket, to: ~p"/lobby/#{lobby_id}?username=#{URI.encode(username)}")}
+  def handle_event("create_lobby", %{"max_players" => max_players, "password" => password, "username" => username}, socket) do
+    password = if password == "", do: nil, else: password  # Treat empty password as nil
+    {:ok, lobby_id} = TermProject.Game.LobbyServer.create_lobby(String.to_integer(max_players), password)
+
+    case TermProject.Game.LobbyServer.join_lobby(lobby_id, username, password) do
+      :ok ->
+        {:noreply, redirect(socket, to: ~p"/lobby/#{lobby_id}?username=#{URI.encode(username)}")}
+
+      {:error, :already_in_lobby} ->
+        # Since the user is already in the lobby, proceed to redirect
+        {:noreply, redirect(socket, to: ~p"/lobby/#{lobby_id}?username=#{URI.encode(username)}")}
+
+      {:error, reason} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Could not join lobby: #{inspect(reason)}")
+         |> redirect(to: "/")}
+    end
   end
+
 
   def handle_event("matchmaking", _params, socket) do
     username = socket.assigns.username

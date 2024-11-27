@@ -7,8 +7,8 @@ defmodule TermProject.Game.LobbyServer do
     GenServer.start_link(__MODULE__, %{}, name: __MODULE__)
   end
 
-  def create_lobby(max_players) do
-    GenServer.call(__MODULE__, {:create_lobby, max_players})
+  def create_lobby(max_players, password \\ nil) do
+    GenServer.call(__MODULE__, {:create_lobby, max_players, password})
   end
 
   def list_lobbies do
@@ -20,8 +20,8 @@ defmodule TermProject.Game.LobbyServer do
     end
   end
 
-  def join_lobby(lobby_id, username) do
-    GenServer.call(__MODULE__, {:join_lobby, lobby_id, username})
+  def join_lobby(lobby_id, username, password \\ nil) do
+    GenServer.call(__MODULE__, {:join_lobby, lobby_id, username, password})
   end
 
   def set_ready_status(lobby_id, username, ready_status) do
@@ -47,37 +47,44 @@ defmodule TermProject.Game.LobbyServer do
     {:ok, %{}}
   end
 
-  def handle_call({:create_lobby, max_players}, _from, state) do
+  def handle_call({:create_lobby, max_players, password}, _from, state) do
     lobby_id = :erlang.unique_integer([:positive])
+    hashed_password = hash_password(password)
     lobby = %{
       id: lobby_id,
       max_players: max_players,
       players: %{},
-      host: nil  # Will be set when first player joins
+      host: nil,  # Will be set when first player joins
+      password: hashed_password
     }
     :ets.insert(:lobbies, {lobby_id, lobby})
     Phoenix.PubSub.broadcast(TermProject.PubSub, "lobbies", :lobby_updated)
     {:reply, {:ok, lobby_id}, state}
   end
 
-  def handle_call({:join_lobby, lobby_id, username}, _from, state) do
-    result = join_lobby_internal(lobby_id, username)
-    case result do
-      {:ok, _} -> {:reply, :ok, state}
-      {:error, reason} -> {:reply, {:error, reason}, state}
-    end
+  def handle_call({:join_lobby, lobby_id, username, password}, _from, state) do
     case :ets.lookup(:lobbies, lobby_id) do
       [{^lobby_id, lobby}] ->
-        if map_size(lobby.players) < lobby.max_players do
-          updated_players = Map.put(lobby.players, username, %{ready: false})
-          # Set host if first player
-          host = if map_size(lobby.players) == 0, do: username, else: lobby.host
-          updated_lobby = %{lobby | players: updated_players, host: host}
-          :ets.insert(:lobbies, {lobby_id, updated_lobby})
-          Phoenix.PubSub.broadcast(TermProject.PubSub, "lobby:#{lobby_id}", :lobby_updated)
-          {:reply, :ok, state}
+        # Check if the lobby requires a password
+        if check_password(lobby.password, password) do
+          # Proceed with joining logic
+          if Map.has_key?(lobby.players, username) do
+            {:reply, {:error, :already_in_lobby}, state}
+          else
+            if map_size(lobby.players) < lobby.max_players do
+              updated_players = Map.put(lobby.players, username, %{ready: false})
+              # Set host if first player
+              host = if map_size(lobby.players) == 0, do: username, else: lobby.host
+              updated_lobby = %{lobby | players: updated_players, host: host}
+              :ets.insert(:lobbies, {lobby_id, updated_lobby})
+              Phoenix.PubSub.broadcast(TermProject.PubSub, "lobby:#{lobby_id}", :lobby_updated)
+              {:reply, :ok, state}
+            else
+              {:reply, {:error, :lobby_full}, state}
+            end
+          end
         else
-          {:reply, {:error, :lobby_full}, state}
+          {:reply, {:error, :incorrect_password}, state}
         end
 
       [] ->
@@ -121,7 +128,7 @@ defmodule TermProject.Game.LobbyServer do
         if lobby.host == username do
           :ets.delete(:lobbies, lobby_id)
           Phoenix.PubSub.broadcast(TermProject.PubSub, "lobbies", :lobby_updated)
-          Phoenix.PubSub.broadcast(TermProject.PubSub, "lobby:#{lobby_id}", :lobby_closed)
+          Phoenix.PubSub.broadcast(TermProject.PubSub, "lobby:chat:#{lobby_id}", :lobby_closed)
           {:reply, :ok, state}
         else
           {:reply, {:error, :not_host}, state}
@@ -137,22 +144,23 @@ defmodule TermProject.Game.LobbyServer do
       :ets.tab2list(:lobbies)
       |> Enum.map(fn {_id, lobby} -> lobby end)
       |> Enum.filter(fn lobby ->
-        map_size(lobby.players) < lobby.max_players
+        map_size(lobby.players) < lobby.max_players and is_nil(lobby.password)
       end)
 
-    case Enum.random(available_lobbies) do
-      nil ->
-        {:reply, {:error, :no_available_lobby}, state}
+      case available_lobbies do
+        [] ->
+          {:reply, {:error, :no_available_lobby}, state}
 
-      lobby ->
-        lobby_id = lobby.id
-        case join_lobby_internal(lobby_id, username) do
-          {:ok, _lobby_id} ->
-            {:reply, {:ok, lobby_id}, state}
-          {:error, reason} ->
-            {:reply, {:error, reason}, state}
-        end
-    end
+        lobbies ->
+          lobby = Enum.random(lobbies)
+          lobby_id = lobby.id
+          case join_lobby_internal(lobby_id, username) do
+            {:ok, _lobby_id} ->
+              {:reply, {:ok, lobby_id}, state}
+            {:error, reason} ->
+              {:reply, {:error, reason}, state}
+          end
+      end
   end
 
   # Helper function to handle joining a lobby internally
@@ -179,4 +187,10 @@ defmodule TermProject.Game.LobbyServer do
     end
   end
 
+  # hashing password function
+  defp hash_password(nil), do: nil
+  defp hash_password(password), do: Bcrypt.hash_pwd_salt(password)
+  defp check_password(nil, _), do: true
+  defp check_password(_hash_password, nil), do: false
+  defp check_password(hash_password, password), do: Bcrypt.verify_pass(password, hash_password)
 end

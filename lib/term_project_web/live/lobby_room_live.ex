@@ -3,32 +3,45 @@ defmodule TermProjectWeb.LobbyRoomLive do
 
   def mount(%{"id" => lobby_id, "username" => username}, _session, socket) do
     lobby_id = String.to_integer(lobby_id)
+    socket = assign(socket, username: username, messages: [], need_password: false)
+
     case TermProject.Game.LobbyServer.get_lobby(lobby_id) do
       {:ok, lobby} ->
         if connected?(socket), do: Phoenix.PubSub.subscribe(TermProject.PubSub, "lobby:chat:#{lobby_id}")
 
-        # Automatically join the user if not already in the lobby
-        unless Map.has_key?(lobby.players, username) do
-          case TermProject.Game.LobbyServer.join_lobby(lobby_id, username) do
-            :ok -> :ok
-            {:error, :lobby_full} ->
-              socket = put_flash(socket, :error, "Lobby is full") |> redirect(to: "/")
-              {:ok, socket}
-            {:error, _} ->
-              socket = put_flash(socket, :error, "Could not join lobby") |> redirect(to: "/")
-              {:ok, socket}
-          end
-        end
+        result =
+          cond do
+            # User is already in the lobby
+            Map.has_key?(lobby.players, username) ->
+              {:ok, assign(socket, lobby: lobby, ready: false, messages: [])}
 
-        # Fetch the updated lobby
-        {:ok, updated_lobby} = TermProject.Game.LobbyServer.get_lobby(lobby_id)
-        {:ok, assign(socket, lobby: updated_lobby, username: username, ready: false, messages: [])}
+            # Lobby requires a password
+            lobby.password ->
+              {:ok, assign(socket, need_password: true, lobby: lobby)}
+
+            # Lobby does not require a password
+            true ->
+              case TermProject.Game.LobbyServer.join_lobby(lobby_id, username) do
+                :ok ->
+                  # Fetch the updated lobby after joining
+                  {:ok, updated_lobby} = TermProject.Game.LobbyServer.get_lobby(lobby_id)
+                  {:ok, assign(socket, lobby: updated_lobby, ready: false, messages: [])}
+
+                {:error, :lobby_full} ->
+                  {:ok, socket |> put_flash(:error, "Lobby is full") |> redirect(to: "/")}
+
+                {:error, _} ->
+                  {:ok, socket |> put_flash(:error, "Could not join lobby") |> redirect(to: "/")}
+              end
+          end
+
+        result
 
       {:error, _} ->
-        socket = assign(socket, :error, "Unable to find lobby.") |> redirect(to: "/login")
-        {:ok, socket}
+        {:ok, redirect(socket, to: "/")}
     end
   end
+
 
   def handle_event("join_lobby", %{"username" => username}, socket) do
     lobby_id = socket.assigns.lobby.id
@@ -41,6 +54,29 @@ defmodule TermProjectWeb.LobbyRoomLive do
         {:noreply, put_flash(socket, :error, "Could not join lobby")}
     end
   end
+
+  # handle event for submitting password
+  def handle_event("submit_password", %{"password" => password}, socket) do
+    lobby_id = socket.assigns.lobby.id
+    username = socket.assigns.username
+
+    case TermProject.Game.LobbyServer.join_lobby(lobby_id, username, password) do
+      :ok ->
+        # Fetch the updated lobby after joining
+        {:ok, updated_lobby} = TermProject.Game.LobbyServer.get_lobby(lobby_id)
+        {:noreply, assign(socket, need_password: false, lobby: updated_lobby, ready: false)}
+
+      {:error, :incorrect_password} ->
+        {:noreply, put_flash(socket, :error, "Incorrect password")}
+
+      {:error, reason} ->
+        {:noreply,
+         socket
+         |> put_flash(:error, "Could not join lobby: #{inspect(reason)}")
+         |> redirect(to: "/")}
+    end
+  end
+
 
   def handle_event("toggle_ready", _params, socket) do
     lobby_id = socket.assigns.lobby.id
