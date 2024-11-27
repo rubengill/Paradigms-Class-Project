@@ -13,8 +13,13 @@ defmodule TermProjectWeb.LobbyLive do
     end
   end
 
-  def handle_event("create_lobby", %{"max_players" => max_players, "password" => password, "is_private" => is_private, "username" => username}, socket) do
-    password = if is_private == "true", do: password, else: nil  # Treat empty password as nil
+  def handle_event("create_lobby", params, socket) do
+    max_players = params["max_players"]
+    password = Map.get(params, "password")
+    is_private = Map.get(params, "is_private", "false")
+    username = params["username"]
+
+    password = if is_private == "true", do: password, else: nil
     {:ok, lobby_id} = TermProject.Game.LobbyServer.create_lobby(String.to_integer(max_players), password)
 
     case TermProject.Game.LobbyServer.join_lobby(lobby_id, username, password) do
@@ -22,7 +27,6 @@ defmodule TermProjectWeb.LobbyLive do
         {:noreply, redirect(socket, to: ~p"/lobby/#{lobby_id}?username=#{URI.encode(username)}")}
 
       {:error, :already_in_lobby} ->
-        # Since the user is already in the lobby, proceed to redirect
         {:noreply, redirect(socket, to: ~p"/lobby/#{lobby_id}?username=#{URI.encode(username)}")}
 
       {:error, reason} ->
@@ -32,6 +36,7 @@ defmodule TermProjectWeb.LobbyLive do
          |> redirect(to: "/")}
     end
   end
+
 
   def handle_event("toggle_private", %{"is_private" => "true"}, socket) do
     {:noreply, assign(socket, is_private: true)}
