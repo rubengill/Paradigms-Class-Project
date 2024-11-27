@@ -3,7 +3,7 @@
 
   <div class="create-lobby-section">
     <h2>Create New Lobby</h2>
-    <form phx-submit="create_lobby" class="create-lobby-form">
+    <form phx-submit="create_lobby" phx-change="toggle_private" class="create-lobby-form">
       <div class="form-group">
         <label>Maximum Players:</label>
         <select name="max_players" class="select-input">
@@ -12,16 +12,25 @@
           <% end %>
         </select>
       </div>
+  
       <div class="form-group">
-        <label>Private Lobby Password</label>
-        <input type="password" name="password" class="password-input" />
+        <label>
+          <input type="checkbox" name="is_private" value="true" checked={@is_private} />
+          Private Lobby
+        </label>
       </div>
+      
+      <div class="form-group" style={"display: #{if @is_private, do: "block", else: "none"};"}>
+        <label>Private Lobby Password</label>
+        <input type="password" name="password" class="password-input" disabled={!@is_private} />
+      </div>      
+  
       <input type="hidden" name="username" value={@username} />
       <div class="form-buttons">
         <button type="submit" class="create-button">Create Lobby</button>
         <button phx-click="matchmaking" class="matchmaking-button">Matchmaking</button>
       </div>
-      </form>
+    </form>
   </div>
 
   <div class="lobby-list">
