@@ -7,7 +7,10 @@ defmodule TermProjectWeb.LobbyRoomLive do
 
     case TermProject.Game.LobbyServer.get_lobby(lobby_id) do
       {:ok, lobby} ->
-        if connected?(socket), do: Phoenix.PubSub.subscribe(TermProject.PubSub, "lobby:chat:#{lobby_id}")
+        if connected?(socket) do
+          Phoenix.PubSub.subscribe(TermProject.PubSub, "lobby:#{lobby_id}")
+          Phoenix.PubSub.subscribe(TermProject.PubSub, "lobby:chat:#{lobby_id}")
+        end
 
         result =
           cond do

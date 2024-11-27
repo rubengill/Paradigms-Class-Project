@@ -175,7 +175,7 @@ defmodule TermProject.Game.LobbyServer do
             host = if map_size(lobby.players) == 0, do: username, else: lobby.host
             updated_lobby = %{lobby | players: updated_players, host: host}
             :ets.insert(:lobbies, {lobby_id, updated_lobby})
-            Phoenix.PubSub.broadcast(TermProject.PubSub, "lobby:#{lobby_id}", :lobby_updated)
+            Phoenix.PubSub.broadcast(TermProject.PubSub, "lobby::#{lobby_id}", :lobby_updated)
             {:ok, lobby_id}
           else
             {:error, :lobby_full}
