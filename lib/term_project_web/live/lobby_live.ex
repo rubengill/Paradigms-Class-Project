@@ -5,12 +5,37 @@ defmodule TermProjectWeb.LobbyLive do
     username = params["username"] || socket.assigns[:username]
 
     if is_nil(username) do
-      # Redirect or prompt the user to enter their username
       {:ok, redirect(socket, to: "/login")}
     else
-      if connected?(socket), do: Phoenix.PubSub.subscribe(TermProject.PubSub, "lobbies")
-      {:ok, assign(socket, lobbies: TermProject.Game.LobbyServer.list_lobbies(), username: username, is_private: false)}
+      if connected?(socket) do
+        Phoenix.PubSub.subscribe(TermProject.PubSub, "global_chat")
+      end
+      {:ok, assign(socket,
+                   lobbies: TermProject.Game.LobbyServer.list_lobbies(),
+                   messages: [],
+                   username: username,
+                   is_private: false)}
     end
+  end
+
+  # Handling sending of messages in the global chat context
+  def handle_event("send_message", %{"message" => msg}, socket) do
+    user = socket.assigns.username || "Anonymous"
+    message = %{user: user, body: msg}
+    Phoenix.PubSub.broadcast(TermProject.PubSub, "global_chat", message)
+    {:noreply, socket}
+  end
+
+  def handle_info(%{user: user, body: body}, socket) do
+    message = %{user: user, body: body}
+    messages = [message | socket.assigns.messages]
+    {:noreply, assign(socket, messages: messages)}
+  end
+
+  # Receiving messages from global chat
+  def handle_info(%{topic: "global_chat", body: body, user: user}, socket) do
+    messages = [ %{user: user, body: body} | socket.assigns.messages ]
+    {:noreply, assign(socket, messages: messages)}
   end
 
   def handle_event("create_lobby", params, socket) do
@@ -66,4 +91,5 @@ defmodule TermProjectWeb.LobbyLive do
   def handle_info(:lobby_updated, socket) do
     {:noreply, assign(socket, lobbies: TermProject.Game.LobbyServer.list_lobbies())}
   end
+
 end

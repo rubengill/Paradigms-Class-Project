@@ -51,7 +51,22 @@
   </div>
 </div>
 
-
+<!-- chat_live.html.heex -->
+<div id="chat-container">
+  <div id="messages" style="height: 300px; overflow-y: auto; border: 1px solid #ccc; margin-bottom: 10px; padding: 5px;">
+    <%= for msg <- @messages do %>
+      <p><strong><%= msg.user %>:</strong> <%= msg.body %></p>
+    <% end %>
+  </div>
+  <!-- Form to handle message sending -->
+  <form phx-submit="send_message">
+    <input type="text" id="messageInput" name="message" placeholder="Type your message here..." phx-hook="EmojiInput">
+    <button type="button" id="emoji-button" phx-hook="EmojiButton">😊</button>
+    <button type="submit">Send</button> <!-- Send Button -->
+  </form>
+  <!-- Emoji Picker Element -->
+  <div id="picker" style="display: none;" phx-hook="EmojiPicker"></div>
+</div>
 
 <style>
   .container {
