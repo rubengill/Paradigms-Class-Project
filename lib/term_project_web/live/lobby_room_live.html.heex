@@ -1,46 +1,9 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
   <title>Chat</title>
-  <script src="/js/main.js" type="module"></script>
-  <script type="importmap">
-{
-    "imports": {
-        "picmo": "https://unpkg.com/picmo@5.8.5/dist/index.js",
-        "@picmo/popup-picker": "https://unpkg.com/@picmo/popup-picker@5.8.5/dist/index.js"
-    }
-}
-  </script>
-  <script type="module">
-    import { createPicker } from 'picmo';
-document.addEventListener('DOMContentLoaded', function () {
-        const rootElement = document.querySelector('#picker');
-        const emojiButton = document.getElementById('emoji-button');
 
-        // Initialize the picker and hide it initially
-        const picker = createPicker({
-            rootElement,  // Ensure this is an empty div where the picker should appear
-            autoHide: false // Optional based on whether you want the picker to hide automatically
-        });
-        rootElement.style.display = 'none'; // Hide the picker initially
-
-        // Event listener for emoji selection
-        picker.addEventListener('emoji:select', event => {
-            const messageInput = document.getElementById('messageInput');
-            messageInput.value += event.emoji; // Append selected emoji to the input field
-        });
-
-        // Toggle the visibility of the picker when the button is clicked
-        emojiButton.addEventListener('click', () => {
-            if (rootElement.style.display === 'none') {
-                rootElement.style.display = 'block';
-            } else {
-                rootElement.style.display = 'none';
-            }
-        });//connectWebSocket();
-  });
-</script>
-  <script src="/js/phoenix.js"></script> <!-- Ensure phoenix.js is correctly loaded -->
 </head>
 <body>
 <div class="lobby-container">
@@ -95,18 +58,21 @@ document.addEventListener('DOMContentLoaded', function () {
   <% end %>
 </div>
 
+<!-- chat_live.html.heex -->
 <div id="chat-container">
   <div id="messages" style="height: 300px; overflow-y: auto; border: 1px solid #ccc; margin-bottom: 10px; padding: 5px;">
     <%= for msg <- @messages do %>
       <p><strong><%= msg.user %>:</strong> <%= msg.body %></p>
     <% end %>
   </div>
+  <!-- Form to handle message sending -->
   <form phx-submit="send_message">
-    <input type="text" name="message" placeholder="Type your message here..." autocomplete="off">
-    <button type="button" id="emoji-button">😊</button> <!-- Emoji trigger button -->
-    <button type="submit">Send</button>
+    <input type="text" id="messageInput" name="message" placeholder="Type your message here..." phx-hook="EmojiInput">
+    <button type="button" id="emoji-button" phx-hook="EmojiButton">😊</button>
+    <button type="submit">Send</button> <!-- Send Button -->
   </form>
-  <div id="picker" style="position: absolute; bottom: 50px;"></div>
+  <!-- Emoji Picker Element -->
+  <div id="picker" style="display: none;" phx-hook="EmojiPicker"></div>
 </div>
 
 

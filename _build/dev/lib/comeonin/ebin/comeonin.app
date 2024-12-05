@@ -1,5 +1,5 @@
 {application,comeonin,
-             [{config_mtime,1731438557},
+             [{config_mtime,1733339493},
               {optional_applications,[]},
               {applications,[kernel,stdlib,elixir,logger]},
               {description,"A specification for password hashing libraries"},

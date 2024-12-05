@@ -3,7 +3,7 @@ import Config
 # Configure your database
 config :term_project, TermProject.Repo,
   username: "postgres",
-  password: "123456z",
+  password: "abcd1234",
   hostname: "localhost",
   database: "term_project_dev",
   stacktrace: true,
@@ -19,7 +19,7 @@ config :term_project, TermProject.Repo,
 config :term_project, TermProjectWeb.Endpoint,
   # Binding to loopback ipv4 address prevents access from other machines.
   # Change to `ip: {0, 0, 0, 0}` to allow access from other machines.
-  http: [ip: {127, 0, 0, 1}, port: 4000],
+  http: [ip: {0, 0, 0, 0}, port: 4000],
   check_origin: false,
   code_reloader: true,
   debug_errors: true,
@@ -87,7 +87,7 @@ config :swoosh, :api_client, false
 # Configure your database
 config :term_project, TermProject.Repo,
   username: "postgres",
-  password: "123456z",
+  password: "abcd1234",
   hostname: "localhost",
   database: "term_project_dev",
   stacktrace: true,
@@ -103,7 +103,7 @@ config :term_project, TermProject.Repo,
 config :term_project, TermProjectWeb.Endpoint,
   # Binding to loopback ipv4 address prevents access from other machines.
   # Change to `ip: {0, 0, 0, 0}` to allow access from other machines.
-  http: [ip: {127, 0, 0, 1}, port: 4000],
+  http: [ip: {0, 0, 0, 0}, port: 4000],
   check_origin: false,
   code_reloader: true,
   debug_errors: true,
