@@ -5,7 +5,9 @@ defmodule TermProjectWeb.GameLive do
   @impl true
   def mount(_params, _session, socket) do
     if connected?(socket) do
+      # Subscribe to game updates
       Phoenix.PubSub.subscribe(TermProject.PubSub, "game")
+      :timer.send_interval(100, self(), :tick)
     end
 
     {:ok, assign(socket,
@@ -52,7 +54,33 @@ defmodule TermProjectWeb.GameLive do
 
   @impl true
   def handle_event("spawn_unit", %{"type" => type}, socket) do
-    # TODO: Implement unit spawning through Game GenServer
-    {:noreply, socket}
+    unit_type = String.to_atom(type)
+    # Create a simple unit for testing
+    new_unit = %{
+      id: System.unique_integer([:positive]),
+      type: unit_type,
+      position: %{x: 50, y: 250},  # Start position for player 1
+      owner: socket.assigns.player_id,
+      health: 100
+    }
+
+    new_units = [new_unit | socket.assigns.units]
+    {:noreply, assign(socket, units: new_units)}
+  end
+
+  @impl true
+  def handle_info(:tick, socket) do
+    # Move all units to the right
+    updated_units = Enum.map(socket.assigns.units, fn unit ->
+      new_x = unit.position.x + 5  # Move 5 pixels right each tick
+      %{unit | position: %{unit.position | x: new_x}}
+    end)
+
+    # Remove units that are off screen
+    remaining_units = Enum.filter(updated_units, fn unit ->
+      unit.position.x < 1200  # Game container width
+    end)
+
+    {:noreply, assign(socket, units: remaining_units)}
   end
 end
