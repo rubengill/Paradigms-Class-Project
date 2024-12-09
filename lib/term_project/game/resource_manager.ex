@@ -1,4 +1,4 @@
-defmodule TermProject.Game.ResourceManager do
+defmodule TermProject.ResourceManager do
   @moduledoc """
   Handles resource accumulation, spending, and validation.
   """
@@ -59,7 +59,7 @@ defmodule TermProject.Game.ResourceManager do
   """
   def auto_update(
       resources,
-      update_amounts \\ %{wood: 50, stone: 20, iron: 1},
+      update_amounts \\ %{wood: 50, stone: 20, iron: 5},
       update_wood \\ false,
       update_stone \\ false,
       update_iron \\ false
