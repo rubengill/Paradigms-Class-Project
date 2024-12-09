@@ -1,125 +1,93 @@
 defmodule TermProject.Game do
-  @moduledoc """
-  Manages the game loop and overall state.
-
-  Responsibilities:
-  - Spawning units
-  - Updating game state each tick
-  - Handling movement and combat
-  - Broadcasting state to clients
-  """
-
   use GenServer
 
-  alias TermProject.Game.{GameState, CombatResolver}
-  alias TermProject.Game.UnitTypes
-  alias TermProject.Utils.{Position, Serializer}
+  alias TermProject.GameState
+  alias TermProject.MockServer # Replace with real server module when available
 
-  @tick_interval 100 # Game loop tick interval in milliseconds
+  @tick_duration 100 # Tick duration in milliseconds
 
-  ## Client API
+  # Public API
 
   @doc """
-  Starts the Game server.
+  Starts a new game instance.
   """
-  def start_link(_opts) do
-    GenServer.start_link(__MODULE__, %GameState{}, name: __MODULE__)
+  def start_link(match_id) do
+    GenServer.start_link(__MODULE__, %{match_id: match_id}, name: via_tuple(match_id))
   end
 
   @doc """
-  Spawns a unit for a player.
-
-  ## Parameters
-  - player_id: The ID of the player spawning the unit.
-  - unit_type: The type of unit to spawn (e.g., :soldier).
-
-  ## Returns
-  - :ok on success
-  - {:error, reason} on failure
+  Spawns a new unit (e.g., Archer, Knight) in the game.
   """
-  def spawn_unit(player_id, unit_type) do
-    GenServer.call(__MODULE__, {:spawn_unit, player_id, unit_type})
+  def spawn_unit(match_id, unit_type) do
+    GenServer.call(via_tuple(match_id), {:spawn_unit, unit_type})
   end
 
-  ## Server Callbacks
+  # Callbacks
 
+  @impl true
   def init(state) do
-    schedule_tick()
-    {:ok, state}
+    # Initialize game state
+    initial_state = GameState.new()
+    server = MockServer # Replace with the real server module
+
+    # Start the game loop
+    send(self(), :tick)
+
+    {:ok, %{state | game_state: initial_state, server: server}}
   end
 
-  def handle_call({:spawn_unit, player_id, unit_type}, _from, state) do
-    with {:ok, unit_module} <- get_unit_module(unit_type),
-         unit <- unit_module.init(id: UUID.uuid4(), owner: player_id, position: Position.starting_position(player_id)) do
-      new_state = %{state | units: [unit | state.units]}
-      {:reply, :ok, new_state}
-    else
-      :error -> {:reply, {:error, :invalid_unit_type}, state}
-    end
+  @impl true
+  def handle_call({:spawn_unit, unit_type}, _from, %{game_state: state} = s) do
+    # Add unit to the game state
+    updated_state = GameState.apply_action(state, {:create_unit, unit_type})
+
+    {:reply, :ok, %{s | game_state: updated_state}}
   end
 
-  def handle_info(:tick, state) do
-    new_state = state
-    |> increment_tick()
-    |> move_units()
-    |> handle_combat()
-    |> remove_dead_units()
-    |> check_win_conditions()
-    broadcast_state(new_state)
-    schedule_tick()
-    {:noreply, new_state}
+  @impl true
+  def handle_info(:tick, %{game_state: state, server: server, match_id: match_id} = s) do
+    # 1. Synchronize with the server
+    {opponent_actions, confirmed_tick} = sync_with_server(server, match_id, state.tick)
+
+    # 2. Apply opponent actions
+    updated_state = GameState.apply_opponent_actions(state, opponent_actions)
+
+    # 3. Process local tick logic
+    updated_state = process_local_tick(updated_state)
+
+    # 4. Send local actions to the server
+    local_actions = generate_local_actions(updated_state)
+    send_actions_to_server(server, match_id, updated_state.tick, local_actions)
+
+    # 5. Schedule the next tick
+    Process.send_after(self(), :tick, @tick_duration)
+
+    {:noreply, %{s | game_state: %{updated_state | tick: updated_state.tick + 1}}}
   end
 
-  ## Helper Functions
+  # Private Helpers
 
-  defp schedule_tick() do
-    Process.send_after(self(), :tick, @tick_interval)
-  end
-
-  defp increment_tick(state) do
-    %{state | tick: state.tick + 1}
-  end
-
-  defp move_units(state) do
-    units = Enum.map(state.units, fn unit ->
-      with {:ok, unit_module} <- get_unit_module(unit.type) do
-        unit_module.move(unit)
-      else
-        _ -> unit
-      end
-    end)
-    %{state | units: units}
-  end
-
-  defp handle_combat(state) do
-    units = CombatResolver.resolve(state.units)
-    %{state | units: units}
-  end
-
-  defp remove_dead_units(state) do
-    units = Enum.filter(state.units, fn unit -> unit.health > 0 end)
-    %{state | units: units}
-  end
-
-  defp check_win_conditions(state) do
-    # TODO: Implement win condition logic
-    # - Check if a player's base has been destroyed
-    # - Determine the winner and handle end-game state
+  defp process_local_tick(state) do
+    # Placeholder: Add unit movement, combat, or resource updates here
     state
   end
 
-  defp broadcast_state(state) do
-    serialized_state = Serializer.serialize_state(state)
-    TermProjectWeb.Endpoint.broadcast!("game:lobby", "state_update", serialized_state)
+  defp generate_local_actions(_state) do
+    # Placeholder: Generate actions for this tick (e.g., spawn units)
+    []
   end
 
-  defp get_unit_module(unit_type) do
-    case unit_type do
-      :soldier -> {:ok, UnitTypes.Soldier}
-      :archer -> {:ok, UnitTypes.Archer}
-      :cavalry -> {:ok, UnitTypes.Cavalry}
-      # TODO: Add other unit types here
-      _ -> :error
-    end
+  defp send_actions_to_server(server, match_id, tick, actions) do
+    # Notify the server about local actions
+    server.send_actions(match_id, tick, actions)
+  end
+
+  defp sync_with_server(server, match_id, tick) do
+    # Get opponent actions from the server
+    server.get_opponent_actions(match_id, tick)
+  end
+
+  defp via_tuple(match_id) do
+    {:via, Registry, {TermProject.GameRegistry, match_id}}
   end
 end
