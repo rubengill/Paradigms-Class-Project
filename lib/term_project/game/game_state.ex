@@ -1,9 +1,10 @@
 defmodule TermProject.GameState do
   alias TermProject.Unit
+  alias TermProject.ResourceManager
 
   defstruct tick: 0,
             units: [],
-            resources: TermProject.ResourceManager.initialize(),
+            resources: ResourceManager.initialize(),
             base: %{health: 1000},
             opponent_actions: []
 
@@ -25,7 +26,7 @@ defmodule TermProject.GameState do
   defp unit_module_for(:knight), do: TermProject.Units.Knight
   defp unit_module_for(:cavalry), do: TermProject.Units.Cavalry
 
-  defp deduct_resources(resources, unit_type) do
+  defp buy_unit(resources, unit_type) do
     # Define resource costs for each unit type
     costs = case unit_type do
       :knight -> %{wood: 50, iron: 30}
@@ -35,7 +36,7 @@ defmodule TermProject.GameState do
     end
 
     # Deduct resources
-    case TermProject.ResourceManager.deduct(resources, costs) do
+    case ResourceManager.deduct(resources, costs) do
       {:ok, updated_resources} -> updated_resources
       {:error, :insufficient_resources} ->
         IO.puts("Not enough resources to create #{unit_type}!")
@@ -43,14 +44,14 @@ defmodule TermProject.GameState do
     end
   end
 
-  def update_resources(state) do
+  def auto_update_resources(state) do
     # Determine which resources to update based on the tick count
     update_wood = rem(state.tick, @wood_update_interval) == 0
     update_stone = rem(state.tick, @stone_update_interval) == 0
     update_iron = rem(state.tick, @iron_update_interval) == 0
 
     # Handle the updates
-    updated_resources = TermProject.ResourceManager.auto_update(
+    updated_resources = ResourceManager.auto_update(
       state.resources,
       update_wood,
       update_stone,
@@ -59,5 +60,15 @@ defmodule TermProject.GameState do
 
     # Return updated state
     %{state | resources: updated_resources}
+  end
+
+  def add_worker_to_unused(state, from) do
+    updated_workers = ResourceManager.redistribute_worker(state.resources, from, :unused)
+    %{state | resources: updated_workers}
+  end
+
+  def add_worker_to_resource(state, to) do
+    updated_workers = ResourceManager.redistribute_worker(state.resources, :unused, to)
+    %{state | resources: updated_workers}
   end
 end

@@ -6,7 +6,7 @@ defmodule TermProject.ResourceManager do
   """
 
   @default_worker_count 9
-  @minimum_workers 1
+  @minimum_workers 0
   @default_wood_rate 50
   @default_stone_rate 25
   @default_iron_rate 10
@@ -24,7 +24,12 @@ defmodule TermProject.ResourceManager do
 
     %{
       amounts: %{wood: 200, stone: 100, iron: 20},
-      workers: %{wood: workers_per_resource, stone: workers_per_resource, iron: workers_per_resource}
+      workers: %{
+        wood: workers_per_resource,
+        stone: workers_per_resource,
+        iron: workers_per_resource,
+        unused: 0
+      }
     }
   end
 
@@ -100,7 +105,6 @@ defmodule TermProject.ResourceManager do
 
     add(resources, additions)
   end
-
 
   @doc """
   Adds resources to the `:amount` field of each resource.
