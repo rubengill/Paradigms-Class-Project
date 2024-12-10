@@ -3,26 +3,58 @@ defmodule TermProject.ResourceManager do
   Handles resource accumulation, spending, and validation.
   """
 
-  @type resources :: %{wood: integer(), stone: integer(), iron: integer()}
+  @doc """
+  Defines the structure of the `resources` map.
+
+  The `resources` map represents the current state of resources and their generation rates:
+    - `amounts`: A map of integers indicating the current quantity of each resource (`:wood`, `:stone`, `:iron`).
+    - `rates`: A map of floats specifying the generation rate multiplier for each resource.
+      These rates are relative to the default generation rates:
+      - `@default_wood_rate`: 50
+      - `@default_stone_rate`: 25
+      - `@default_iron_rate`: 10
+
+  Generation rate for a resource is calculated as `default_rate * rate`.
+  """
+  @type resources :: %{
+    amounts: %{wood: integer(), stone: integer(), iron: integer()},
+    rates: %{wood: float(), stone: float(), iron: float()}
+  }
+
+  @initial_wood_amt 200
+  @initial_stone_amt 100
+  @initial_iron_amt 20
+
+  @default_wood_rate 50
+  @default_stone_rate 25
+  @default_iron_rate 10
 
   @doc """
-  Initializes resources with default values.
+  Initializes resources with default amounts and rates.
   """
   def initialize() do
-    %{wood: 100, stone: 50, iron: 10}
+    %{
+      amounts: %{wood: @initial_wood_amt, stone: @initial_stone_amt, iron: @initial_iron_amt},
+      rates: %{wood: 1.0, stone: 1.0, iron: 1.0}
+    }
   end
 
   @doc """
-  Adds resources.
+  Adds resources to the `:amount` field of each resource.
 
   Parameters
-    - resources (map): The current resource map
-    - additions (map, optional): A map specifying the amounts to add for each resource
+    - resources (map): The current resource map, with each resource containing `:amount` and `:boost`.
+    - additions (map, optional): A map specifying the amounts to add for each resource.
 
-  Returns: new resource map with updated values for the specified resources.
+  Returns: updated resource map with modified `:amounts` for the specified resources.
   """
   def add(resources, additions \\ %{}) do
-    Map.merge(resources, additions, fn _key, current, addition -> current + addition end)
+    updated_amounts =
+      Enum.reduce(additions, resources.amounts, fn {key, addition}, acc ->
+        Map.update!(acc, key, &(&1 + addition))
+      end)
+
+    %{resources | amounts: updated_amounts}
   end
 
   @doc """
@@ -37,40 +69,92 @@ defmodule TermProject.ResourceManager do
       - {:error, :insufficient_resources} if there are not enough resources to deduct
     """
   def deduct(resources, costs \\ %{}) do
-    if Enum.all?(costs, fn {key, value} -> Map.get(resources, key, 0) >= value end) do
-      {:ok, Map.merge(resources, costs, fn _key, current, cost -> current - cost end)}
+    if Enum.all?(costs, fn {key, value} -> Map.get(resources.amounts, key, 0) >= value end) do
+      updated_amounts =
+        Enum.reduce(costs, resources.amounts, fn {key, value}, acc ->
+          Map.update!(acc, key, &(&1 - value))
+        end)
+
+      {:ok, %{resources | amounts: updated_amounts}}
     else
       {:error, :insufficient_resources}
     end
   end
 
-
   @doc """
   Used for auto-updating resources based on specified update amounts and conditional flags.
 
   Parameters
-    - resources (map): The current resource map
+    - resources: The current resource state
     - update_amounts (map, optional): A map specifying amounts to add for each resource
     - update_wood (boolean, optional): Whether to update :wood
     - update_stone (boolean, optional): Whether to update :stone
     - update_iron (boolean, optional): Whether to update :iron
 
-  Returns: new resource map with updated values for :wood, :stone, and :iron.
+  Returns: updated resource map with adjusted amounts for :wood, :stone, and :iron.
   """
   def auto_update(
-      resources,
-      update_amounts \\ %{wood: 50, stone: 20, iron: 5},
-      update_wood \\ false,
-      update_stone \\ false,
-      update_iron \\ false
-    ) do
-    filtered_updates = %{
-      wood: if(update_wood, do: Map.get(update_amounts, :wood, 0), else: 0),
-      stone: if(update_stone, do: Map.get(update_amounts, :stone, 0), else: 0),
-      iron: if(update_iron, do: Map.get(update_amounts, :iron, 0), else: 0)
+    resources,
+    update_wood \\ false,
+    update_stone \\ false,
+    update_iron \\ false
+  ) do
+    # Scale the update amounts by the current rates
+    scaled_updates = %{
+    wood: if(update_wood, do: @default_wood_rate * Map.get(resources.rates, :wood, 1.0), else: 0),
+    stone: if(update_stone, do: @default_stone_rate * Map.get(resources.rates, :stone, 1.0), else: 0),
+    iron: if(update_iron, do: @default_iron_rate * Map.get(resources.rates, :iron, 1.0), else: 0)
     }
 
-    add(resources, filtered_updates)
+    # Use the add function to update resource amounts
+    updated_resources = add(resources, Enum.into(scaled_updates, %{}, fn {key, value} -> {key, trunc(value)} end))
+
+    # Return the updated resource map
+    updated_resources
+  end
+
+  @doc """
+  Increases the rate of a specified resource by 25%.
+
+  Parameters:
+    - resources (map): The current resource map, with `amounts` and `rates`.
+    - rate_to_increase (atom): The resource key (`:wood`, `:stone`, or `:iron`) whose rate should be increased.
+
+  Returns: updated resource map with the increased rate.
+  """
+  def increase_rate(resources, rate_to_increase) do
+    updated_rates =
+      Map.update!(resources.rates, rate_to_increase, fn current_rate ->
+        current_rate + 0.25
+      end)
+
+    %{resources | rates: updated_rates}
+  end
+
+  @doc """
+  Decreases the rate of a specified resource by 25%.
+
+  Parameters:
+    - resources (map): The current resource map, with `amounts` and `rates`.
+    - rate_to_decrease (atom): The resource key (`:wood`, `:stone`, or `:iron`) whose rate should be decreased.
+
+  Returns:
+    - {:ok, updated_resources} if the rate decrease is successful.
+    - {:error, :minimum_rate_reached} if the rate is already at the minimum and cannot be decreased further.
+  """
+  def decrease_rate(resources, rate_to_decrease) do
+    current_rate = Map.get(resources.rates, rate_to_decrease, 0.0)
+
+    if current_rate > 0.25 do
+      updated_rates =
+        Map.update!(resources.rates, rate_to_decrease, fn rate ->
+          rate - 0.25
+        end)
+
+      {:ok, %{resources | rates: updated_rates}}
+    else
+      {:error, :minimum_rate_reached}
+    end
   end
 
 end
