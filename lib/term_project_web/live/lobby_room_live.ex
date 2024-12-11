@@ -16,11 +16,11 @@ defmodule TermProjectWeb.LobbyRoomLive do
           cond do
             # User is already in the lobby
             Map.has_key?(lobby.players, username) ->
-              {:ok, assign(socket, lobby: lobby, ready: false, messages: [])}
+              {:ok, assign(socket, lobby: lobby, ready: false, messages: [], countdown: nil)}
 
             # Lobby requires a password
             lobby.password ->
-              {:ok, assign(socket, need_password: true, lobby: lobby)}
+              {:ok, assign(socket, need_password: true, lobby: lobby, countdown: nil)}
 
             # Lobby does not require a password
             true ->
@@ -28,7 +28,7 @@ defmodule TermProjectWeb.LobbyRoomLive do
                 :ok ->
                   # Fetch the updated lobby after joining
                   {:ok, updated_lobby} = TermProject.Game.LobbyServer.get_lobby(lobby_id)
-                  {:ok, assign(socket, lobby: updated_lobby, ready: false, messages: [])}
+                  {:ok, assign(socket, lobby: updated_lobby, ready: false, messages: [], countdown: nil)}
 
                 {:error, :lobby_full} ->
                   {:ok, socket |> put_flash(:error, "Lobby is full") |> redirect(to: "/")}
@@ -137,4 +137,20 @@ defmodule TermProjectWeb.LobbyRoomLive do
     messages = [message | socket.assigns.messages]
     {:noreply, assign(socket, messages: messages)}
   end
+
+  def handle_info(:start_countdown, socket) do
+    send(self(), {:countdown, 15})
+    {:noreply, assign(socket, countdown: 15)}
+  end
+
+  def handle_info({:countdown, 0}, socket) do
+    # Navigate to the game page
+    {:noreply, push_navigate(socket, to: ~p"/game/#{socket.assigns.lobby.id}?username=#{URI.encode(socket.assigns.username)}")}
+  end
+
+  def handle_info({:countdown, seconds}, socket) do
+    Process.send_after(self(), {:countdown, seconds - 1}, 1000)
+    {:noreply, assign(socket, countdown: seconds - 1)}
+  end
+
 end
