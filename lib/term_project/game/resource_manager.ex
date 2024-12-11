@@ -9,11 +9,11 @@ defmodule TermProject.ResourceManager do
   @minimum_workers 0
   @default_wood_rate 50
   @default_stone_rate 25
-  @default_iron_rate 10
+  @default_iron_rate 20
 
   @type resources :: %{
     amounts: %{wood: integer(), stone: integer(), iron: integer()},
-    workers: %{wood: integer(), stone: integer(), iron: integer()}
+    workers: %{wood: integer(), stone: integer(), iron: integer(), unused: integer()}
   }
 
   @doc """
@@ -58,6 +58,21 @@ defmodule TermProject.ResourceManager do
     else
       {:error, :insufficient_workers}
     end
+  end
+
+  @doc """
+  Adds 3 workers to the unused pool.
+
+  Parameters:
+    - resources (map): The current resource map.
+
+  Returns: updated resource map with 3 additional workers in the `:unused` pool.
+  """
+  def add_workers_to_pool(resources) do
+    updated_workers =
+      Map.update!(resources.workers, :unused, &(&1 + 3))
+
+    %{resources | workers: updated_workers}
   end
 
   @doc """
