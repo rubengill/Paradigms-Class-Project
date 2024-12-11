@@ -9,6 +9,7 @@ defmodule TermProjectWeb.LobbyLive do
     else
       if connected?(socket) do
         Phoenix.PubSub.subscribe(TermProject.PubSub, "global_chat")
+        Phoenix.PubSub.subscribe(TermProject.PubSub, "lobbies")
       end
       {:ok, assign(socket,
                    lobbies: TermProject.Game.LobbyServer.list_lobbies(),
@@ -18,26 +19,7 @@ defmodule TermProjectWeb.LobbyLive do
     end
   end
 
-  # Handling sending of messages in the global chat context
-  def handle_event("send_message", %{"message" => msg}, socket) do
-    user = socket.assigns.username || "Anonymous"
-    message = %{user: user, body: msg}
-    Phoenix.PubSub.broadcast(TermProject.PubSub, "global_chat", message)
-    {:noreply, socket}
-  end
-
-  def handle_info(%{user: user, body: body}, socket) do
-    message = %{user: user, body: body}
-    messages = [message | socket.assigns.messages]
-    {:noreply, assign(socket, messages: messages)}
-  end
-
-  # Receiving messages from global chat
-  def handle_info(%{topic: "global_chat", body: body, user: user}, socket) do
-    messages = [ %{user: user, body: body} | socket.assigns.messages ]
-    {:noreply, assign(socket, messages: messages)}
-  end
-
+  # Event Handlers
   def handle_event("create_lobby", params, socket) do
     max_players = params["max_players"]
     password = Map.get(params, "password")
@@ -62,7 +44,6 @@ defmodule TermProjectWeb.LobbyLive do
     end
   end
 
-
   def handle_event("toggle_private", %{"is_private" => "true"}, socket) do
     {:noreply, assign(socket, is_private: true)}
   end
@@ -71,7 +52,6 @@ defmodule TermProjectWeb.LobbyLive do
     {:noreply, assign(socket, is_private: false)}
   end
 
-
   def handle_event("matchmaking", _params, socket) do
     username = socket.assigns.username
 
@@ -79,7 +59,7 @@ defmodule TermProjectWeb.LobbyLive do
       {:ok, lobby_id} ->
         {:noreply, redirect(socket, to: ~p"/lobby/#{lobby_id}?username=#{URI.encode(username)}")}
       {:error, :no_available_lobby} ->
-        max_players = 4  # Default value
+        max_players = 2  # Default value
         {:ok, lobby_id} = TermProject.Game.LobbyServer.create_lobby(max_players)
         :ok = TermProject.Game.LobbyServer.join_lobby(lobby_id, username)
         {:noreply, redirect(socket, to: ~p"/lobby/#{lobby_id}?username=#{URI.encode(username)}")}
@@ -88,8 +68,26 @@ defmodule TermProjectWeb.LobbyLive do
     end
   end
 
+  def handle_event("send_message", %{"message" => msg}, socket) do
+    user = socket.assigns.username || "Anonymous"
+    message = %{user: user, body: msg}
+    Phoenix.PubSub.broadcast(TermProject.PubSub, "global_chat", message)
+    {:noreply, socket}
+  end
+
+  # Info Handlers
+  def handle_info(%{user: user, body: body}, socket) do
+    message = %{user: user, body: body}
+    messages = [message | socket.assigns.messages]
+    {:noreply, assign(socket, messages: messages)}
+  end
+
+  def handle_info(%{topic: "global_chat", body: body, user: user}, socket) do
+    messages = [%{user: user, body: body} | socket.assigns.messages]
+    {:noreply, assign(socket, messages: messages)}
+  end
+
   def handle_info(:lobby_updated, socket) do
     {:noreply, assign(socket, lobbies: TermProject.Game.LobbyServer.list_lobbies())}
   end
-
 end
