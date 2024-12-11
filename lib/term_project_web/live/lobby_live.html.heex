@@ -7,9 +7,7 @@
       <div class="form-group">
         <label>Maximum Players:</label>
         <select name="max_players" class="select-input">
-          <%= for n <- 1..4 do %>
-            <option value={"#{n}"}><%= n %> Player<%= if n > 1, do: "s" %></option>
-          <% end %>
+          <option value="2">2 Players</option>
         </select>
       </div>
   
