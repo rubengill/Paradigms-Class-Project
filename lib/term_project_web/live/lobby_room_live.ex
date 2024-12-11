@@ -20,7 +20,7 @@ defmodule TermProjectWeb.LobbyRoomLive do
 
             # Lobby requires a password
             lobby.password ->
-              {:ok, assign(socket, need_password: true, lobby: lobby)}
+              {:ok, assign(socket, need_password: true, lobby: lobby, countdown: nil)}
 
             # Lobby does not require a password
             true ->

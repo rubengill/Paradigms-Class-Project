@@ -1,5 +1,5 @@
 {application,swoosh,
-             [{config_mtime,1733339493},
+             [{config_mtime,1731438557},
               {optional_applications,[hackney,finch,req,mail,gen_smtp,mua,
                                       cowboy,plug,plug_cowboy,bandit,
                                       multipart,ex_aws]},

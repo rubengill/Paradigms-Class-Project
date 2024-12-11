@@ -1,5 +1,5 @@
 {application,elixir_make,
-             [{config_mtime,1733339493},
+             [{config_mtime,1731438557},
               {optional_applications,[castore,certifi]},
               {applications,[kernel,stdlib,elixir,logger,castore,certifi]},
               {description,"A Make compiler for Mix"},

@@ -1,5 +1,5 @@
 {application,finch,
-             [{config_mtime,1733339493},
+             [{config_mtime,1731438557},
               {optional_applications,[]},
               {applications,[kernel,stdlib,elixir,logger,mint,nimble_pool,
                              nimble_options,telemetry,mime]},

@@ -1,5 +1,5 @@
 {application,phoenix,
-             [{config_mtime,1733339493},
+             [{config_mtime,1731438557},
               {optional_applications,[phoenix_view,plug_cowboy,jason]},
               {applications,[kernel,stdlib,elixir,logger,eex,crypto,
                              public_key,plug,plug_crypto,telemetry,

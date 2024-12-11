@@ -1,5 +1,5 @@
 {application,bcrypt_elixir,
-             [{config_mtime,1733339493},
+             [{config_mtime,1731438557},
               {optional_applications,[]},
               {applications,[kernel,stdlib,elixir,logger,crypto,comeonin]},
               {description,"Bcrypt password hashing algorithm for Elixir"},
