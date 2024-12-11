@@ -102,6 +102,8 @@ defmodule TermProject.Game.LobbyServer do
           updated_lobby = %{lobby | players: updated_players}
           :ets.insert(:lobbies, {lobby_id, updated_lobby})
           Phoenix.PubSub.broadcast(TermProject.PubSub, "lobby:#{lobby_id}", :lobby_updated)
+          # Check if all players are ready
+          check_all_ready(lobby_id)
           {:reply, :ok, state}
         else
           {:reply, {:error, :player_not_found}, state}
@@ -180,6 +182,23 @@ defmodule TermProject.Game.LobbyServer do
           else
             {:error, :lobby_full}
           end
+        end
+
+      [] ->
+        {:error, :lobby_not_found}
+    end
+  end
+
+  def check_all_ready(lobby_id) do
+    case :ets.lookup(:lobbies, lobby_id) do
+      [{^lobby_id, lobby}] ->
+        all_ready = Enum.all?(lobby.players, fn {_username, %{ready: ready}} -> ready end)
+
+        if all_ready do
+          Phoenix.PubSub.broadcast(TermProject.PubSub, "lobby:#{lobby_id}", :start_countdown)
+          :ok
+        else
+          {:error, :not_all_ready}
         end
 
       [] ->
