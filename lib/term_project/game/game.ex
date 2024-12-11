@@ -27,7 +27,8 @@ defmodule TermProject.Game do
   - `{:ok, pid}` on success.
   """
   def start_link(match_id) do
-    GenServer.start_link(__MODULE__, %{match_id: match_id}, name: via_tuple(match_id))
+    # GenServer.start_link(__MODULE__, %{match_id: match_id}, name: match_id)
+    GenServer.start_link(__MODULE__, nil, name: match_id)
   end
 
   @doc """
@@ -41,7 +42,7 @@ defmodule TermProject.Game do
   - `:ok` on success.
   """
   def spawn_unit(match_id, unit_type) do
-    GenServer.call(via_tuple(match_id), {:spawn_unit, unit_type})
+    GenServer.call(match_id, {:spawn_unit, unit_type})
   end
 
   # GenServer Callbacks
@@ -49,13 +50,18 @@ defmodule TermProject.Game do
   @impl true
   def init(state) do
     # Initialize game state and server connection
-    initial_state = GameState.new()
-    server = MockServer # Replace with the real server module
+    # initial_state = GameState.new()
+    # server = MockServer # Replace with the real server module
+    initial_state = %{
+      match_id: state,
+      game_state: GameState.new(),
+      server: MockServer
+    }
 
     # Start the game loop
     send(self(), :tick)
 
-    {:ok, %{state | game_state: initial_state, server: server}}
+    {:ok, initial_state}
   end
 
   @impl true
@@ -115,9 +121,5 @@ defmodule TermProject.Game do
   defp sync_with_server(server, match_id, tick) do
     # Get opponent actions from the server
     server.get_opponent_actions(match_id, tick)
-  end
-
-  defp via_tuple(match_id) do
-    {:via, Registry, {TermProject.GameRegistry, match_id}}
   end
 end

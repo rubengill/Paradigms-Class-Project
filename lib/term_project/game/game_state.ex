@@ -10,17 +10,36 @@ defmodule TermProject.GameState do
   alias TermProject.Unit
   alias TermProject.ResourceManager
 
+  # Field dimensions
+  @field_width 1000
+  @field_height 600
+
+  # Base positions
+  @base_positions %{
+    1 => %{x: 0, y: @field_height/2},     # Left side
+    2 => %{x: 1000, y: @field_height/2}   # Right side
+  }
+
   defstruct tick: 0,
             units: [],
             resources: ResourceManager.initialize(),
-            base: %{health: 1000},
+            bases: %{
+              1 => %{position: nil, health: 1000},
+              2 => %{position: nil, health: 1000}
+            },
+            field: %{
+              width: @field_width,
+              height: @field_height,
+              base_positions: @base_positions
+            },
             opponent_actions: []
 
   @type t :: %__MODULE__{
           tick: integer(),
           units: list(),
           resources: map(),
-          base: map(),
+          bases: map(),
+          field: map(),
           opponent_actions: list()
         }
 
@@ -28,7 +47,12 @@ defmodule TermProject.GameState do
   Creates a new game state with default values.
   """
   def new do
-    %__MODULE__{}
+    %__MODULE__{
+      bases: %{
+        1 => %{position: @base_positions[1], health: 1000},
+        2 => %{position: @base_positions[2], health: 1000}
+      }
+    }
   end
 
   @wood_update_interval 50  # 5 seconds
