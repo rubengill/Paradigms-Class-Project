@@ -14,7 +14,7 @@ defmodule TermProject.Application do
       # Start the Endpoint (http/https)
       TermProjectWeb.Endpoint,
       # Start the Game server
-      TermProject.Game
+      {TermProject.Game, :test_match_id}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html for strategies and options
