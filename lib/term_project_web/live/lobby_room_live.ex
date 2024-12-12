@@ -45,7 +45,6 @@ defmodule TermProjectWeb.LobbyRoomLive do
     end
   end
 
-
   def handle_event("join_lobby", %{"username" => username}, socket) do
     lobby_id = socket.assigns.lobby.id
     case TermProject.Game.LobbyServer.join_lobby(lobby_id, username) do
