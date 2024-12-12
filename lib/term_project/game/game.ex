@@ -101,7 +101,11 @@ defmodule TermProject.Game do
 
   defp process_local_tick(state) do
     # Placeholder: Add unit movement, combat, or resource updates here
-    state
+
+    # Update resources
+    updated_resources = GameState.auto_update_resources(state)
+
+    %{state | resources: updated_resources}
   end
 
   defp generate_local_actions(_state) do
