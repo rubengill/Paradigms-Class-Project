@@ -32,6 +32,10 @@ defmodule TermProject.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
+      {:ueberauth_google, "~> 0.10"},
+      {:ueberauth, "~> 0.10"},
+      {:ueberauth_github, "~> 0.8"},
+      {:plug_cowboy, "~> 2.5"}, # Ensure Plug is included for auth
       {:phoenix, "~> 1.7.14"},
       {:phoenix_ecto, "~> 4.5"},
       {:ecto_sql, "~> 3.10"},
@@ -59,7 +63,9 @@ defmodule TermProject.MixProject do
       {:jason, "~> 1.2"},
       {:dns_cluster, "~> 0.1.1"},
       {:bandit, "~> 1.5"},
-      {:uuid, "~> 1.1"} # UUID library for generating unique IDs
+      {:uuid, "~> 1.1"}, # UUID library for generating unique IDs
+      {:bcrypt_elixir, "~> 3.0"},
+      {:phoenix_html_helpers, "~> 1.0"}
     ]
   end
 

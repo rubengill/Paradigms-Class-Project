@@ -9,10 +9,36 @@
 # and its dependencies with the aid of the Config module.
 #
 # This configuration file is loaded before any dependency and
-# is restricted to this project.
+# is restricted to this project.  
 
 # General application configuration
 import Config
+
+# Define a helper module to load .env variables
+defmodule EnvLoader do
+  def load_env(file \\ ".env") do
+    case File.read(file) do
+      {:ok, content} ->
+        content
+        |> String.split("\n", trim: true)
+        |> Enum.each(fn line ->
+          case String.split(line, "=", parts: 2) do
+            [key, value] ->
+              System.put_env(String.trim(key), String.trim(value))
+              IO.inspect({key, value}, label: "Loaded ENV")
+
+            _ ->
+              :ok
+          end
+        end)
+
+      {:error, reason} ->
+        IO.puts("Failed to load .env file: #{reason}")
+    end
+  end
+end
+
+EnvLoader.load_env()
 
 config :term_project,
   ecto_repos: [TermProject.Repo],
@@ -71,3 +97,19 @@ config :phoenix, :json_library, Jason
 # Import environment specific config. This must remain at the bottom
 # of this file so it overrides the configuration defined above.
 import_config "#{config_env()}.exs"
+
+
+config :ueberauth, Ueberauth,
+  providers: [
+    github: {Ueberauth.Strategy.Github, [default_scope: "user:email"]},
+    google: {Ueberauth.Strategy.Google, [default_scope: "email profile"]}
+  ]
+
+config :ueberauth, Ueberauth.Strategy.Github.OAuth,
+  client_id: System.get_env("GITHUB_CLIENT_ID"),
+  client_secret: System.get_env("GITHUB_CLIENT_SECRET")
+
+
+config :ueberauth, Ueberauth.Strategy.Google.OAuth,
+  client_id: System.get_env("GOOGLE_CLIENT_ID"),
+  client_secret: System.get_env("GOOGLE_CLIENT_SECRET")

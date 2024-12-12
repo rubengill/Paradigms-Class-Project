@@ -1,0 +1,73 @@
+.game-container {
+  position: relative;
+  width: 1200px;
+  height: 600px;
+  margin: 0 auto;
+  border: 1px solid #ccc;
+}
+
+.game-field {
+  position: relative;
+  height: 500px;
+  background: #f0f0f0;
+  overflow: hidden;
+}
+
+.status-panel {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+  background: #eee;
+}
+
+.game-controls {
+  display: flex;
+  gap: 10px;
+  padding: 10px;
+}
+
+.unit-button {
+  padding: 8px 16px;
+  background: #4a90e2;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.base {
+  position: absolute;
+  width: 60px;
+  height: 100px;
+  background: #333;
+  color: white;
+}
+
+.left-base {
+  left: 0;
+}
+
+.right-base {
+  right: 0;
+}
+
+.unit {
+  position: absolute;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+  transition: left 0.1s linear;
+}
+
+.unit.soldier {
+  background-color: #ff0000;
+}
+
+.unit.archer {
+  background-color: #00ff00;
+}
+
+.unit.cavalry {
+  background-color: #0000ff;
+}

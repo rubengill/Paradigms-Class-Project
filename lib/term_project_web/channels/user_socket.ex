@@ -4,9 +4,6 @@ defmodule TermProjectWeb.UserSocket do
   ## Channels
   channel "game:*", TermProjectWeb.GameChannel
 
-  # Transports
-  transport :websocket, Phoenix.Transports.WebSocket
-
   # TODO: Implement authentication if required
   def connect(_params, socket, _connect_info) do
     {:ok, socket}

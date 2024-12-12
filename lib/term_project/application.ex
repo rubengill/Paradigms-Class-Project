@@ -7,6 +7,8 @@ defmodule TermProject.Application do
 
   def start(_type, _args) do
     children = [
+      # Start the Ecto repository
+      TermProject.Repo,
       # Start the Telemetry supervisor
       TermProjectWeb.Telemetry,
       # Start the PubSub system
@@ -14,7 +16,9 @@ defmodule TermProject.Application do
       # Start the Endpoint (http/https)
       TermProjectWeb.Endpoint,
       # Start the Game server
-      TermProject.Game
+      TermProject.Game.LobbyServer,
+      # Add a dynamic supervisor for games
+      {DynamicSupervisor, strategy: :one_for_one, name: TermProject.GameSupervisor}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html for strategies and options

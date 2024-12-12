@@ -1,4 +1,6 @@
 defmodule TermProjectWeb.Router do
+  alias TermProject.Game
+  alias Hex.API.Auth
   use TermProjectWeb, :router
 
   pipeline :browser do
@@ -17,7 +19,30 @@ defmodule TermProjectWeb.Router do
   scope "/", TermProjectWeb do
     pipe_through :browser
 
-    get "/", PageController, :home
+    get "/signup", AuthController, :new
+    post "/signup", AuthController, :create
+
+    live_session :default, on_mount: {TermProjectWeb.AuthLive, :on_mount} do
+      live "/testing", GameLive
+    end
+
+    live "/game", GameLive
+
+    live "/", LobbyLive, :index
+    live "/lobby/:id", LobbyRoomLive, :show
+
+    live "/register", RegistrationLive, :new
+    live "/login", LoginLive, :new
+    live "/game/:lobby_id", GameLive, :show
+
+    get "/logout", LogoutController, :logout
+  end
+
+  scope "/auth", TermProjectWeb do
+    pipe_through :browser
+
+    get "/:provider", AuthController, :request
+    get "/:provider/callback", AuthController, :callback
   end
 
   # Other scopes may use custom stacks.

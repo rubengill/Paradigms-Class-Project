@@ -1,42 +1,36 @@
-defmodule TermProject.Game.UnitTypes.Archer do
-  @moduledoc """
-  Archer unit implementation.
-  """
+defmodule TermProject.Units.Archer do
+  @behaviour TermProject.Unit
 
-  @behaviour TermProject.Game.Unit
+  @type t :: %__MODULE__{
+          type: atom(),
+          health: integer(),
+          damage: integer(),
+          range: integer(),
+          owner: atom()
+        }
 
-  alias TermProject.Utils.Position
+  defstruct type: :archer, health: 50, damage: 10, range: 5, owner: nil
 
   @impl true
-  def init(opts) do
+  def type, do: :archer
+
+  @impl true
+  def stats do
     %{
-      id: opts[:id],
-      type: :archer,
-      position: opts[:position],
-      owner: opts[:owner],
-      health: 75,
-      damage: 15,
-      speed: 0.8,
-      range: 5.0
+      health: 50,
+      damage: 10,
+      range: 5
     }
   end
 
   @impl true
-  def move(unit) do
-    # Archers may have different movement logic
-    target_position = Position.enemy_base(unit.owner)
-    new_position = Position.move_towards(unit.position, target_position, unit.speed)
-    %{unit | position: new_position}
+  def attack(%{owner: owner} = target, %{owner: attacker_owner} = attacker) when owner != attacker_owner do
+    # Reduce target's health by the Archer's damage
+    %{target | health: target.health - attacker.damage}
   end
 
   @impl true
-  def attack(unit, target) do
-    new_target = %{target | health: target.health - unit.damage}
-    {unit, new_target}
-  end
-
-  @impl true
-  def in_range?(unit, target) do
-    Position.distance(unit.position, target.position) <= unit.range
+  def in_range?({x1, _y1}, {x2, _y2}) do
+    abs(x2 - x1) <= 5
   end
 end
