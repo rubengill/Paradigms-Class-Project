@@ -2,10 +2,10 @@ import Config
 
 # Configure your database
 config :term_project, TermProject.Repo,
-  username: "singh",
-  password: "singh",
-  hostname: "localhost",
-  database: "singh",
+  username: System.get_env("DB_NAME"),
+  password: System.get_env("DB_PASSWORD"),
+  hostname: System.get_env("DB_HOST"),
+  database: System.get_env("DB_DATABASE"),
   stacktrace: true,
   show_sensitive_data_on_connection_error: true,
   pool_size: 10
