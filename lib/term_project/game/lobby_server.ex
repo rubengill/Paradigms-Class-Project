@@ -73,7 +73,7 @@ defmodule TermProject.Game.LobbyServer do
 
   def handle_call({:join_lobby, lobby_id, username, password}, _from, state) do
     with {:ok, lobby} <- lookup_lobby(lobby_id),
-         :ok <- validate_password(lobby, password),
+         :ok <- validate_password_if_needed(lobby, password),
          :ok <- validate_player_status(lobby, username),
          :ok <- validate_lobby_capacity(lobby) do
       updated_lobby = update_lobby_state(lobby, username)
@@ -81,7 +81,8 @@ defmodule TermProject.Game.LobbyServer do
       Phoenix.PubSub.broadcast(TermProject.PubSub, "lobby:#{lobby_id}", :lobby_updated)
       {:reply, :ok, state}
     else
-      {:error, reason} -> {:reply, {:error, reason}, state}
+      {:error, reason} ->
+        {:reply, {:error, reason}, state}
     end
   end
 
@@ -158,6 +159,19 @@ defmodule TermProject.Game.LobbyServer do
       [{^lobby_id, lobby}] -> {:ok, lobby}
       [] -> {:error, :lobby_not_found}
     end
+  end
+
+  defp validate_password_if_needed(lobby, password) do
+    IO.puts("why are u gay")
+    # IO.inspect(lobby.password)
+    if Map.has_key?(lobby, :password) and lobby.password != nil do
+      IO.puts("Validating password")
+      validate_password(lobby, password)
+    else
+      IO.puts("No password to validate")
+      :ok
+    end
+
   end
 
   defp validate_password(lobby, password) do
