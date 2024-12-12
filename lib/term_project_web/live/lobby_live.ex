@@ -88,6 +88,7 @@ defmodule TermProjectWeb.LobbyLive do
     message = %{user: user, body: msg}
     Phoenix.PubSub.broadcast(TermProject.PubSub, "global_chat", message)
     {:noreply, socket}
+    # assign(socket, :message, "")
   end
 
   # Info Handlers

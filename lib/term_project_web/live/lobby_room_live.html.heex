@@ -5,12 +5,12 @@
     <title>Chat</title>
   </head>
   <body>
-    <div class="bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100">
+    <div class="bg-gray-900 text-gray-900 dark:bg-gray-900 dark:text-gray-100">
       <div class="max-w-4xl mx-auto p-8">
         <h1 class="text-3xl font-bold text-center mb-8">Lobby #<%= @lobby.id %></h1>
 
         <%= if @need_password do %>
-          <div class="bg-gray-100 dark:bg-gray-800 p-6 rounded-lg shadow-md">
+          <div class="bg-gray-900 dark:bg-gray-800 p-6 rounded-lg shadow-md">
             <h2 class="text-lg font-semibold mb-4 text-white">
               This lobby is Password-Protected.
             </h2>
@@ -90,7 +90,7 @@
           class="h-72 overflow-y-auto border border-gray-300 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800"
           id="messages"
         >
-          <%= for msg <- @messages do %>
+          <%= for msg <- Enum.reverse(@messages) do %>
             <p><strong><%= msg.user %>:</strong> <%= msg.body %></p>
           <% end %>
         </div>
