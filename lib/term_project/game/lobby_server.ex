@@ -119,7 +119,7 @@ defmodule TermProject.Game.LobbyServer do
       :ets.tab2list(:lobbies)
       |> Enum.map(fn {_id, lobby} -> lobby end)
       |> Enum.filter(fn lobby ->
-        map_size(lobby.players) < lobby.max_players and is_nil(lobby.password)
+        map_size(lobby.players) < lobby.max_players and Map.has_key?(lobby, :password)
       end)
 
     case available_lobbies do
@@ -162,8 +162,6 @@ defmodule TermProject.Game.LobbyServer do
   end
 
   defp validate_password_if_needed(lobby, password) do
-    IO.puts("why are u gay")
-    # IO.inspect(lobby.password)
     if Map.has_key?(lobby, :password) and lobby.password != nil do
       IO.puts("Validating password")
       validate_password(lobby, password)
@@ -171,7 +169,6 @@ defmodule TermProject.Game.LobbyServer do
       IO.puts("No password to validate")
       :ok
     end
-
   end
 
   defp validate_password(lobby, password) do
