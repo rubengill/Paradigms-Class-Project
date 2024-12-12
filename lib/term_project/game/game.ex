@@ -1,125 +1,104 @@
 defmodule TermProject.Game do
   @moduledoc """
   Handles the core game logic and state for each game instance.
-
-  Responsibilities:
-  - Manages game state using a `GenServer`.
-  - Synchronizes actions with the server (using a mock server for now).
-  - Processes game logic on each tick.
+  Uses PubSub for state synchronization through lobby channels.
   """
 
   use GenServer
 
   alias TermProject.GameState
-  alias TermProject.MockServer # Replace with the real server module when available
-
-  @tick_duration 100 # Tick duration in milliseconds
+  alias Phoenix.PubSub
 
   # Public API
 
   @doc """
-  Starts a new game instance.
-
-  ## Parameters
-  - `match_id`: A unique identifier for the match.
-
-  ## Returns
-  - `{:ok, pid}` on success.
+  Starts a new game instance for a specific match.
+  The match_id corresponds to the lobby_id from LobbyServer.
   """
   def start_link(match_id) do
-    # GenServer.start_link(__MODULE__, %{match_id: match_id}, name: match_id)
-    GenServer.start_link(__MODULE__, nil, name: match_id)
+    GenServer.start_link(__MODULE__, %{match_id: match_id}, name: via_tuple(match_id))
   end
 
   @doc """
-  Spawns a new unit (e.g., Archer, Knight) in the game.
-
-  ## Parameters
-  - `match_id`: The unique match ID.
-  - `unit_type`: The type of unit to spawn.
-
-  ## Returns
-  - `:ok` on success.
+  Spawns a unit for a specific player in the game.
+  Broadcasts the update through PubSub to sync all players.
   """
-  def spawn_unit(match_id, unit_type) do
-    GenServer.call(match_id, {:spawn_unit, unit_type})
+  def spawn_unit(match_id, unit_type, player_id) do
+    GenServer.call(via_tuple(match_id), {:spawn_unit, unit_type, player_id})
+  end
+
+  @doc """
+  Retrieves the current game state for a match.
+  Used by clients to sync their local state.
+  """
+  def get_state(match_id) do
+    GenServer.call(via_tuple(match_id), :get_state)
   end
 
   # GenServer Callbacks
 
   @impl true
-  def init(state) do
-    # Initialize game state and server connection
-    # initial_state = GameState.new()
-    # server = MockServer # Replace with the real server module
+  def init(%{match_id: match_id}) do
+    # Initialize game state when lobby transitions to "playing" state
     initial_state = %{
-      match_id: state,
+      match_id: match_id,  # Same as lobby_id for correlation
       game_state: GameState.new(),
-      server: MockServer
+      players: %{}  # Populated from lobby players
     }
 
-    # Start the game loop
-    send(self(), :tick)
+    # Subscribe to two PubSub channels:
+    # "game:#{match_id}" - For game-specific events (unit spawns, combat, etc)
+    # "lobby:#{match_id}" - For lobby events (player joins/leaves, game start/end)
+    PubSub.subscribe(TermProject.PubSub, "game:#{match_id}")
+    PubSub.subscribe(TermProject.PubSub, "lobby:#{match_id}")
 
     {:ok, initial_state}
   end
 
   @impl true
-  def handle_call({:spawn_unit, unit_type}, _from, %{game_state: state} = s) do
-    # Add unit to the game state
-    updated_state = GameState.apply_action(state, {:create_unit, unit_type})
-
-    {:reply, :ok, %{s | game_state: updated_state}}
+  def handle_call({:spawn_unit, unit_type, player_id}, _from, state) do
+    updated_state = GameState.apply_action(state.game_state, {:create_unit, unit_type})
+    broadcast_game_update(state.match_id, updated_state)
+    
+    {:reply, :ok, %{state | game_state: updated_state}}
   end
 
   @impl true
-  def handle_info(:tick, %{game_state: state, server: server, match_id: match_id} = s) do
-    # Synchronize with the server
-    {opponent_actions, confirmed_tick} = sync_with_server(server, match_id, state.tick)
+  def handle_call(:get_state, _from, state) do
+    {:reply, state.game_state, state}
+  end
 
-    # Log the synchronization for debugging
-    IO.inspect(opponent_actions, label: "Opponent Actions")
-    IO.puts("Server confirmed tick: #{confirmed_tick}")
+  @impl true
+  def handle_info({:player_action, player_id, action}, state) do
+    updated_state = GameState.apply_action(state.game_state, action)
+    broadcast_game_update(state.match_id, updated_state)
+    
+    {:noreply, %{state | game_state: updated_state}}
+  end
 
-    # Apply opponent actions
-    updated_state = GameState.apply_opponent_actions(state, opponent_actions)
+  @impl true
+  def handle_info(:game_started, state) do
+    # Initialize game state when all players are ready
+    {:noreply, state}
+  end
 
-    # Process local tick logic
-    updated_state = process_local_tick(updated_state)
-
-    # Send local actions to the server
-    local_actions = generate_local_actions(updated_state)
-    send_actions_to_server(server, match_id, updated_state.tick, local_actions)
-
-    # Schedule the next tick
-    Process.send_after(self(), :tick, @tick_duration)
-
-    {:noreply, %{s | game_state: %{updated_state | tick: updated_state.tick + 1}}}
+  @impl true
+  def handle_info(:game_ended, state) do
+    # Clean up game state
+    {:stop, :normal, state}
   end
 
   # Private Helpers
 
-  defp process_local_tick(state) do
-    # Placeholder: Add unit movement, combat, or resource updates here
-
-    # Update resources
-    updated_resources = GameState.auto_update_resources(state)
-
-    %{state | resources: updated_resources}
+  defp via_tuple(match_id) do
+    {:via, Registry, {TermProject.GameRegistry, match_id}}
   end
 
-  defp generate_local_actions(_state) do
-    # Placeholder: Generate actions for this tick (e.g., spawn units)
-    []
-  end
-
-  defp send_actions_to_server(server, match_id, tick, actions) do
-    # Notify the server about local actions
-    server.send_actions(match_id, tick, actions)
-  end
-
-  defp sync_with_server(server, match_id, tick) do
-    # Get opponent actions from the server
-    server.get_opponent_actions(match_id, tick)
+  defp broadcast_game_update(match_id, game_state) do
+    PubSub.broadcast(
+      TermProject.PubSub,
+      "game:#{match_id}",
+      {:game_state_update, game_state}
+    )
   end
 end
