@@ -1,5 +1,5 @@
-defmodule TermProject.Game.UnitCosts do
-  def cost(:soldier), do: 50
-  def cost(:archer), do: 75
-  def cost(:cavalry), do: 100
+defmodule TermProject.UnitCosts do
+  def cost(:soldier), do: %{wood: 50, iron: 30}
+  def cost(:archer), do: %{wood: 30, stone: 20}
+  def cost(:cavalry), do: %{wood: 40, iron: 40}
 end
