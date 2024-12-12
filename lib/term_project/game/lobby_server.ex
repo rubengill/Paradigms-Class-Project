@@ -139,14 +139,46 @@ defmodule TermProject.Game.LobbyServer do
     end
   end
 
+  # In lobby_server.ex
   def check_all_ready(lobby_id) do
     case :ets.lookup(:lobbies, lobby_id) do
       [{^lobby_id, lobby}] ->
         all_ready = Enum.all?(lobby.players, fn {_username, %{ready: ready}} -> ready end)
+        IO.puts("All players ready: #{all_ready}")
 
         if all_ready do
+          [host | others] = Map.keys(lobby.players)
+          player_mapping = %{1 => host, 2 => Enum.at(others, 0)}
+
+          # Debug start game
+          IO.puts("Starting game server for lobby: #{lobby_id}")
+
+          result =
+            DynamicSupervisor.start_child(
+              TermProject.GameSupervisor,
+              {TermProject.Game,
+               %{
+                 lobby_id: lobby_id,
+                 players: player_mapping
+               }}
+            )
+
+          IO.inspect(result, label: "Game server start result")
+
           Phoenix.PubSub.broadcast(TermProject.PubSub, "lobby:#{lobby_id}", :start_countdown)
-          :ok
+
+          case result do
+            {:ok, pid} ->
+              IO.puts("Game server started with pid: #{inspect(pid)}")
+              :ok
+
+            {:error, {:already_started, _}} ->
+              :ok
+
+            {:error, reason} ->
+              IO.puts("Failed to start game: #{inspect(reason)}")
+              {:error, :game_start_failed}
+          end
         else
           {:error, :not_all_ready}
         end

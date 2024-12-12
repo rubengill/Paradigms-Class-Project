@@ -25,6 +25,7 @@ defmodule TermProjectWeb.Router do
     live_session :default, on_mount: {TermProjectWeb.AuthLive, :on_mount} do
       live "/testing", GameLive
     end
+
     live "/game", GameLive
 
     live "/", LobbyLive, :index
@@ -32,7 +33,7 @@ defmodule TermProjectWeb.Router do
 
     live "/register", RegistrationLive, :new
     live "/login", LoginLive, :new
-    live "/game/:id", GameLive
+    live "/game/:lobby_id", GameLive, :show
   end
 
   scope "/auth", TermProjectWeb do
@@ -41,6 +42,7 @@ defmodule TermProjectWeb.Router do
     get "/:provider", AuthController, :request
     get "/:provider/callback", AuthController, :callback
   end
+
   # Other scopes may use custom stacks.
   # scope "/api", TermProjectWeb do
   #   pipe_through :api

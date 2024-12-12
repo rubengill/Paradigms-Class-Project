@@ -6,8 +6,6 @@ defmodule TermProject.Application do
   use Application
 
   def start(_type, _args) do
-    :ets.new(:game_table, [:named_table, :public, :set, {:read_concurrency, true}])
-
     children = [
       # Start the Ecto repository
       TermProject.Repo,
@@ -18,9 +16,9 @@ defmodule TermProject.Application do
       # Start the Endpoint (http/https)
       TermProjectWeb.Endpoint,
       # Start the Game server
-      {TermProject.Game, :test_match_id},
-      # Start the Game server
-      TermProject.Game.LobbyServer
+      TermProject.Game.LobbyServer,
+      # Add a dynamic supervisor for games
+      {DynamicSupervisor, strategy: :one_for_one, name: TermProject.GameSupervisor}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html for strategies and options
