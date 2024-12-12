@@ -54,58 +54,73 @@ defmodule TermProjectWeb.GameLive do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="game-container">
-      <%= if @countdown do %>
-        <div class="countdown">Game starts in <%= @countdown %> seconds...</div>
-      <% else %>
-        <div class="status-panel">
-          <div class="resources">
-            <%= if @game_state.resources[@player_id] do %>
-              <div>Wood: <%= @game_state.resources[@player_id].amounts.wood %></div>
-              <div>Stone: <%= @game_state.resources[@player_id].amounts.stone %></div>
-              <div>Iron: <%= @game_state.resources[@player_id].amounts.iron %></div>
-            <% else %>
-              <div>Loading resources...</div>
-            <% end %>
+<div class="game-container flex flex-col items-center justify-center min-h-screen bg-gray-800 text-white">
+  <%= if @countdown do %>
+    <div class="countdown text-2xl font-bold bg-yellow-500 text-black p-4 rounded-lg shadow-md">
+      Game starts in <%= @countdown %> seconds...
+    </div>
+  <% else %>
+    <div class="status-panel flex flex-col gap-4 w-full max-w-4xl bg-gray-700 p-6 rounded-lg shadow-lg">
+      <div class="resources grid grid-cols-3 gap-4 text-center">
+        <%= if @game_state.resources[@player_id] do %>
+          <div class="bg-gray-900 p-4 rounded-lg shadow-md">
+            Wood: <span class="font-semibold"><%= @game_state.resources[@player_id].amounts.wood %></span>
           </div>
-
-          <div class="bases">
-            <div>Base 1: <%= @game_state.bases[1].health %></div>
-
-            <div>Base 2: <%= @game_state.bases[2].health %></div>
+          <div class="bg-gray-900 p-4 rounded-lg shadow-md">
+            Stone: <span class="font-semibold"><%= @game_state.resources[@player_id].amounts.stone %></span>
           </div>
+          <div class="bg-gray-900 p-4 rounded-lg shadow-md">
+            Iron: <span class="font-semibold"><%= @game_state.resources[@player_id].amounts.iron %></span>
+          </div>
+        <% else %>
+          <div class="col-span-3 text-yellow-500 font-medium">Loading resources...</div>
+        <% end %>
+      </div>
+
+      <div class="bases flex justify-around">
+        <div class="bg-gray-900 p-4 rounded-lg shadow-md">
+          Base 1 Health: <span class="font-semibold text-green-500"><%= @game_state.bases[1].health %></span>
         </div>
-
-        <div class="game-controls">
-          <button phx-click="spawn_unit" phx-value-type="archer" class="unit-button">
-            Spawn Archer
-          </button>
-
-          <button phx-click="spawn_unit" phx-value-type="soldier" class="unit-button">
-            Spawn Soldier
-          </button>
-
-          <button phx-click="spawn_unit" phx-value-type="cavalry" class="unit-button">
-            Spawn Cavalry
-          </button>
+        <div class="bg-gray-900 p-4 rounded-lg shadow-md">
+          Base 2 Health: <span class="font-semibold text-green-500"><%= @game_state.bases[2].health %></span>
         </div>
+      </div>
+    </div>
 
-        <div class="game-field">
-          <div class="base left-base">Player 1 Base</div>
+    <div class="game-controls flex justify-center gap-4 mt-6">
+      <button phx-click="spawn_unit" phx-value-type="archer"
+        class="unit-button bg-blue-600 hover:bg-blue-500 text-white py-2 px-4 rounded-lg shadow-md transition">
+        Spawn Archer
+      </button>
+      <button phx-click="spawn_unit" phx-value-type="soldier"
+        class="unit-button bg-green-600 hover:bg-green-500 text-white py-2 px-4 rounded-lg shadow-md transition">
+        Spawn Soldier
+      </button>
+      <button phx-click="spawn_unit" phx-value-type="cavalry"
+        class="unit-button bg-red-600 hover:bg-red-500 text-white py-2 px-4 rounded-lg shadow-md transition">
+        Spawn Cavalry
+      </button>
+    </div>
 
-          <div class="base right-base">Player 2 Base</div>
-
-          <%= for unit <- @game_state.units do %>
-            <div
-              class={"unit #{unit.type}"}
-              style={"left: #{unit.position.x}px; top: #{unit.position.y}px;"}
-            >
-              <%= unit.type %>
-            </div>
-          <% end %>
+    <div class="game-field relative mt-6 w-full max-w-4xl bg-gray-600 p-4 rounded-lg shadow-lg">
+      <div class="base left-base absolute top-4 left-4 bg-blue-800 text-white py-2 px-4 rounded-lg shadow-md">
+        Player 1 Base
+      </div>
+      <div class="base right-base absolute top-4 right-4 bg-red-800 text-white py-2 px-4 rounded-lg shadow-md">
+        Player 2 Base
+      </div>
+      <%= for unit <- @game_state.units do %>
+        <div
+          class={"unit #{unit.type} absolute text-center text-sm bg-white text-black py-1 px-2 rounded-lg shadow-md"}
+          style={"left: #{unit.position.x}px; top: #{unit.position.y}px;"}
+        >
+          <%= unit.type %>
         </div>
       <% end %>
     </div>
+  <% end %>
+</div>
+
     """
   end
 
