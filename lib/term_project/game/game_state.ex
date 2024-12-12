@@ -68,7 +68,7 @@ defmodule TermProject.GameState do
     # Dynamically create a unit using its module
     unit_module = unit_module_for(unit_type)
     unit_stats = unit_module.stats()
-    resources = deduct_resources(state.resources, unit_type)
+    resources = buy_unit(state.resources, unit_type)
 
     units = [%{unit_stats | type: unit_type} | state.units]
     %{state | resources: resources, units: units}
