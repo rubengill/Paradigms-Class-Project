@@ -8,6 +8,7 @@ defmodule TermProject.GameState do
   """
 
   alias TermProject.Unit
+  alias TermProject.UnitCosts
   alias TermProject.ResourceManager
 
   # Field dimensions
@@ -19,6 +20,11 @@ defmodule TermProject.GameState do
     1 => %{x: 0, y: @field_height/2},     # Left side
     2 => %{x: 1000, y: @field_height/2}   # Right side
   }
+
+  # Resource update intervals (based off of 100ms tick speed)
+  @wood_update_interval 50  # 5 seconds
+  @stone_update_interval 70 # 7 seconds
+  @iron_update_interval 120 # 12 seconds
 
   defstruct tick: 0,
             units: [],
@@ -54,10 +60,6 @@ defmodule TermProject.GameState do
       }
     }
   end
-
-  @wood_update_interval 50  # 5 seconds
-  @stone_update_interval 70 # 7 seconds
-  @iron_update_interval 120 # 12 seconds
 
   @doc """
   Applies an action (e.g., create unit, attack) to the game state.
@@ -97,13 +99,7 @@ defmodule TermProject.GameState do
     - The original resource map if there are insufficient resources.
   """
   defp buy_unit(resources, unit_type) do
-    # Define resource costs for each unit type
-    costs = case unit_type do
-      :knight -> %{wood: 50, iron: 30}
-      :archer -> %{wood: 30, stone: 20}
-      :cavalry -> %{wood: 40, iron: 40}
-      _ -> %{}
-    end
+    costs = UnitCosts.cost(unit_type)
 
     # Deduct resources
     case ResourceManager.deduct(resources, costs) do
@@ -125,7 +121,7 @@ defmodule TermProject.GameState do
     - The original resource map if there are insufficient resources.
   """
   def buy_new_workers(resources) do
-    costs = %{wood: 300, stone: 150, iron: 120}
+    costs = %{wood: 500, stone: 150, iron: 120}
 
     # Deduct resources
     case ResourceManager.deduct(resources, costs) do

@@ -3,13 +3,20 @@ defmodule TermProject.ResourceManager do
   Handles resource accumulation, spending, and validation.
 
   Uses a worker pool system to dynamically adjust resource generation rates.
+
+  Responsibilities:
+  - Manages resource amounts and worker distribution.
+  - Calculates resource generation rates based on worker allocation.
+  - Supports adding, deducting, and redistributing workers.
+  - Automates resource generation with conditional updates.
+  - Validates resource availability for purchases and upgrades.
   """
 
   @default_worker_count 9
   @minimum_workers 0
-  @default_wood_rate 50
-  @default_stone_rate 25
-  @default_iron_rate 20
+  @default_wood_rate 60
+  @default_stone_rate 30
+  @default_iron_rate 15
 
   @type resources :: %{
     amounts: %{wood: integer(), stone: integer(), iron: integer()},
@@ -38,8 +45,8 @@ defmodule TermProject.ResourceManager do
 
   Parameters:
     - resources (map): The current resource map.
-    - from_resource (atom): The resource key to remove a worker from (`:wood`, `:stone`, or `:iron`).
-    - to_resource (atom): The resource key to assign a worker to (`:wood`, `:stone`, or `:iron`).
+    - from_resource (atom): The resource key to remove a worker from.
+    - to_resource (atom): The resource key to assign a worker to.
 
   Returns:
     - {:ok, updated_resources} if redistribution is successful.
@@ -79,7 +86,7 @@ defmodule TermProject.ResourceManager do
   Calculates the generation rate for each resource based on the number of assigned workers.
 
   Parameters:
-    - resources (map): The current resource map, which includes `workers`.
+    - resources (map): The current resource map.
 
   Returns: A map with rates for each resource, calculated relative to the default number of workers.
   """
@@ -143,7 +150,7 @@ defmodule TermProject.ResourceManager do
   Deducts resources. Validates whether a purchase or action is valid.
 
   Parameters:
-    - resources (map): The current resource map, with `amounts` and `workers`.
+    - resources (map): The current resource map.
     - costs (map): A map specifying the amounts to deduct for each resource.
 
   Returns:
