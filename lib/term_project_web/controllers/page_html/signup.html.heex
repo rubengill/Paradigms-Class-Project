@@ -5,7 +5,7 @@
       <%= label(f, :email, class: "block text-sm font-medium text-white") %>
       <%= text_input(f, :email,
         class:
-          "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-700"
       ) %>
       <%= error_tag(f, :email) %>
     </div>
@@ -14,7 +14,7 @@
       <%= label(f, :full_name, class: "block text-sm font-medium text-white") %>
       <%= text_input(f, :full_name,
         class:
-          "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-700"
       ) %>
       <div class="text-sm text-red-600">
         <%= error_tag(f, :full_name) %>
@@ -22,10 +22,10 @@
     </div>
 
     <div class="space-y-2">
-      <%= label(f, :password, class: "block text-sm font-medium text-white") %>
+      <%= label(f, :password, class: "block text-sm font-medium white") %>
       <%= password_input(f, :password,
         class:
-          "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+          "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm text-gray-700"
       ) %>
       <div class="text-sm text-red-600">
         <%= error_tag(f, :password) %>

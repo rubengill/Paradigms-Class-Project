@@ -10,12 +10,12 @@ defmodule TermProjectWeb.AuthController do
     render(conn, "signup.html", changeset: changeset)
   end
 
-  def create(conn, %{"user" => user_params}) do
+  def create(conn, %{"login_user" => user_params}) do
     case Accounts.create_user(user_params) do
-      {:ok, _user} ->
+      {:ok, user} ->
         conn
         |> put_flash(:info, "Account created successfully!")
-        |> redirect(to: "/login")
+        |> redirect(to: "/?username=#{single_word(user.full_name)}")
 
       {:error, changeset} ->
         render(conn, "signup.html", changeset: changeset)
