@@ -298,7 +298,7 @@
       id="messages"
       class="h-72 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-md mb-4 p-4 bg-gray-50 dark:bg-gray-800"
     >
-      <%= for msg <- @messages do %>
+      <%= for msg <- Enum.reverse(@messages) do %>
         <p class="text-gray-800 dark:text-gray-100">
           <strong><%= msg.user %>:</strong> <%= msg.body %>
         </p>
