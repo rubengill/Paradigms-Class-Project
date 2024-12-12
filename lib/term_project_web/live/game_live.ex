@@ -143,6 +143,11 @@ defmodule TermProjectWeb.GameLive do
     {:noreply, assign(socket, :countdown, nil)}
   end
 
+  @impl true
+  def handle_info({:combat_event, message}, socket) do
+    {:noreply, socket |> put_flash(:info, message)}
+  end
+
   defp send_countdown(pid, remaining) do
     Process.send_after(pid, {:countdown, remaining}, 1000)
   end

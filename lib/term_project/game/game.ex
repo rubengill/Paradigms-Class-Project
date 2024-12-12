@@ -12,6 +12,7 @@ defmodule TermProject.Game do
 
   @tick_rate 100
   @unit_speed 5  # pixels per tick
+  @attack_cooldown 1000  # ms between attacks
 
   # Public API
 
@@ -37,7 +38,7 @@ defmodule TermProject.Game do
   """
   def get_state(lobby_id) do
     try do
-      case :global.whereis_name({:game_server, lobby_id}) do
+      case :global.whereis_name({:global, {:game_server, lobby_id}}) do
         :undefined ->
           # No game process exists
           {:error, :game_not_found}
@@ -118,18 +119,26 @@ defmodule TermProject.Game do
   end
 
   @impl true
-  def handle_info(:tick, %{game_state: game_state} = state) do
+  def handle_info(:tick, %{game_state: game_state, lobby_id: lobby_id} = state) do
     updated_game_state = game_state
-      |> TermProject.GameState.auto_update_resources()
-      |> update_unit_positions()
+      |> GameState.auto_update_resources()  # Re-add resource updates
+      |> update_unit_positions(lobby_id)
+      |> update_combat()
 
-    broadcast_game_update(state.lobby_id, updated_game_state)
+    broadcast_game_update(lobby_id, updated_game_state)
     {:noreply, %{state | game_state: updated_game_state}}
   end
 
   @impl true
   def handle_info(unknown_message, state) do
     IO.warn("Received unknown message in Game server: #{inspect(unknown_message)}")
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_info({:combat_event, message}, state) do
+    # Just broadcast combat events, don't update state
+    broadcast_combat_event(state.lobby_id, message)
     {:noreply, state}
   end
 
@@ -167,28 +176,167 @@ defmodule TermProject.Game do
   defp get_base_position(1), do: %{x: 0, y: 300.0}
   defp get_base_position(2), do: %{x: 1000, y: 300.0}
 
-  defp update_unit_positions(game_state) do
+  defp update_unit_positions(game_state, lobby_id) do
     updated_units = Enum.map(game_state.units, fn unit ->
-      # Get enemy base position
-      target_base_id = if unit.owner == 1, do: 2, else: 1
-      target_pos = game_state.bases[target_base_id].position
-
-      # Calculate direction vector
-      dx = target_pos.x - unit.position.x
-      dy = target_pos.y - unit.position.y
-
-      # Normalize and scale by speed
-      distance = :math.sqrt(dx * dx + dy * dy)
-      if distance > 0 do
-        new_x = unit.position.x + (dx / distance) * @unit_speed
-        new_y = unit.position.y + (dy / distance) * @unit_speed
-
-        %{unit | position: %{x: new_x, y: new_y}}
-      else
-        unit
-      end
+      process_unit(unit, game_state, lobby_id)
     end)
-
     %{game_state | units: updated_units}
   end
+
+  defp process_unit(unit, game_state, lobby_id) do
+    target = find_target(unit, game_state)
+
+    case target do
+      {:unit, enemy} ->
+        if check_range(unit, enemy.position, unit.range) do
+          {updated_unit, updated_game_state} = attack_unit(unit, enemy, game_state, lobby_id)
+          updated_unit
+        else
+          move_unit(unit, game_state)
+        end
+
+      {:base, base_pos} ->
+        if check_range(unit, base_pos, unit.range) do
+          {updated_unit, _} = attack_base(unit, game_state, lobby_id)
+          updated_unit
+        else
+          move_unit(unit, game_state)
+        end
+
+      _ -> move_unit(unit, game_state)
+    end
+  end
+
+  defp check_range(unit, target_pos, range) do
+    dx = target_pos.x - unit.position.x
+    dy = target_pos.y - unit.position.y
+    :math.sqrt(dx * dx + dy * dy) <= range
+  end
+
+  defp attack_unit(unit, target, game_state, lobby_id) do
+    if can_attack?(unit) do
+      current_time = System.monotonic_time(:millisecond)
+      damage = unit.damage
+
+      # Calculate new target health
+      new_health = target.health - damage
+      updated_target = %{target | health: new_health}
+
+      # Update game state
+      updated_units = game_state.units
+        |> Enum.map(fn u ->
+          if u.id == target.id, do: updated_target, else: u
+        end)
+        |> Enum.filter(fn u -> u.health > 0 end)
+
+      # Broadcast appropriate message
+      message = if new_health <= 0 do
+        "#{unit.type} killed #{target.type}!"
+      else
+        "#{unit.type} deals #{damage} damage to #{target.type}! (Health: #{new_health})"
+      end
+      broadcast_combat_event(lobby_id, message)
+
+      updated_game_state = %{game_state | units: updated_units}
+      {%{unit | last_attack: current_time}, updated_game_state}
+    else
+      {unit, game_state}
+    end
+  end
+
+  defp attack_base(unit, game_state, lobby_id) do
+    current_time = System.monotonic_time(:millisecond)
+    enemy_base_id = if unit.owner == 1, do: 2, else: 1
+    damage = unit.damage
+
+    if can_attack?(unit) do
+      broadcast_combat_event(lobby_id, "#{unit.type} deals #{damage} damage to base!")
+
+      updated_bases = Map.update!(game_state.bases, enemy_base_id, fn base ->
+        %{base | health: base.health - damage}
+      end)
+
+      updated_unit = %{unit | last_attack: current_time}
+      updated_game_state = %{game_state | bases: updated_bases}
+
+      {updated_unit, updated_game_state}
+    else
+      {unit, game_state}
+    end
+  end
+
+  defp broadcast_combat_event(lobby_id, message) do
+    Phoenix.PubSub.broadcast(
+      TermProject.PubSub,
+      "game:#{lobby_id}",
+      {:combat_event, message}
+    )
+  end
+
+  defp can_attack?(unit) do
+    current_time = System.monotonic_time(:millisecond)
+    is_nil(unit.last_attack) ||
+      current_time - unit.last_attack >= @attack_cooldown
+  end
+
+  defp move_unit(unit, game_state) do
+    # Get enemy base position
+    target_base_id = if unit.owner == 1, do: 2, else: 1
+    target_pos = game_state.bases[target_base_id].position
+
+    # Calculate direction vector
+    dx = target_pos.x - unit.position.x
+    dy = target_pos.y - unit.position.y
+
+    # Normalize and scale by speed
+    distance = :math.sqrt(dx * dx + dy * dy)
+    if distance > 0 do
+      new_x = unit.position.x + (dx / distance) * @unit_speed
+      new_y = unit.position.y + (dy / distance) * @unit_speed
+      %{unit | position: %{x: new_x, y: new_y}}
+    else
+      unit
+    end
+  end
+
+  defp find_target(unit, game_state) do
+    enemy_base_id = if unit.owner == 1, do: 2, else: 1
+    base_pos = game_state.bases[enemy_base_id].position
+
+    # Find closest enemy unit
+    enemy_units = Enum.filter(game_state.units, fn other ->
+      other.owner != unit.owner && other.health > 0
+    end)
+
+    closest_enemy = Enum.min_by(enemy_units, fn enemy ->
+      dx = enemy.position.x - unit.position.x
+      dy = enemy.position.y - unit.position.y
+      :math.sqrt(dx * dx + dy * dy)
+    end, fn -> nil end)
+
+    cond do
+      closest_enemy -> {:unit, closest_enemy}
+      true -> {:base, base_pos}
+    end
+  end
+
+  defp update_combat(game_state) do
+    alive_units = Enum.filter(game_state.units, fn unit ->
+      unit.health > 0
+    end)
+    %{game_state | units: alive_units}
+  end
+
+  defp replace_unit(units, updated_unit) do
+    Enum.map(units, fn unit ->
+      cond do
+        unit.id == updated_unit.id && updated_unit.health <= 0 -> nil
+        unit.id == updated_unit.id -> updated_unit
+        true -> unit
+      end
+    end)
+    |> Enum.reject(&is_nil/1)
+  end
+
+  defp handle_error({:error, _reason} = error), do: error
 end

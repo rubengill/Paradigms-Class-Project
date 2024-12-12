@@ -128,16 +128,27 @@ defmodule TermProject.GameState do
   end
 
   defp create_unit(unit_type, player_id, state) do
-    base_position = state.bases[player_id].position
+    base_pos = state.bases[player_id].position
 
     %{
       id: System.unique_integer([:positive]),
       type: unit_type,
       health: 100,
+      damage: get_unit_damage(unit_type),
+      range: get_unit_range(unit_type),
       owner: player_id,
-      position: base_position # Spawn at player's base position
+      position: base_pos,
+      last_attack: nil
     }
   end
+
+  defp get_unit_damage(:archer), do: 15
+  defp get_unit_damage(:soldier), do: 25
+  defp get_unit_damage(:cavalry), do: 35
+
+  defp get_unit_range(:archer), do: 200
+  defp get_unit_range(:soldier), do: 50
+  defp get_unit_range(:cavalry), do: 75
 
   @doc """
   Applies a list of opponent actions to the game state.
@@ -210,21 +221,21 @@ defmodule TermProject.GameState do
   Returns:
     - The updated game state with resources adjusted according to the current tick.
   """
-  def auto_update_resources(%{resources: resources} = state) do
-    updated_resources = Enum.reduce(resources, %{}, fn {player_id, player_resources}, acc ->
-      Map.put(acc, player_id, update_player_resources(player_resources))
+  def auto_update_resources(state) do
+    updated_resources = Map.map(state.resources, fn {player_id, resources} ->
+      amounts = resources.amounts
+      workers = resources.workers
+
+      updated_amounts = %{
+        wood: amounts.wood + (workers.wood * 2),
+        stone: amounts.stone + workers.stone,
+        iron: amounts.iron + workers.iron
+      }
+
+      %{resources | amounts: updated_amounts}
     end)
 
     %{state | resources: updated_resources}
-  end
-
-  defp update_player_resources(%{workers: workers, amounts: amounts}) do
-    new_amounts = %{
-      wood: amounts.wood + (workers.wood * 2),
-      stone: amounts.stone + workers.stone,
-      iron: amounts.iron + workers.iron
-    }
-    %{workers: workers, amounts: new_amounts}
   end
 
   @doc """
