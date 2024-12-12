@@ -1,4 +1,4 @@
-defmodule TermProjectWeb.AuthHtml do
+defmodule TermProjectWeb.AuthHTML do
   use TermProjectWeb, :html
 
   import TermProjectWeb.ErrorHelpers

@@ -32,7 +32,7 @@ defmodule TermProjectWeb.AuthController do
         conn
         |> put_session(:user_id, user.id)
         |> put_flash(:info, "Logged in successfully!")
-        |> redirect(to: "/chat")
+        |> redirect(to: "/login")
 
       {:error, _reason} ->
         conn
@@ -71,7 +71,7 @@ defmodule TermProjectWeb.AuthController do
         conn
         |> put_session(:user_id, user.id)
         |> put_flash(:info, "Welcome #{user.full_name}!")
-        |> redirect(to: "/chat")
+        |> redirect(to: "/login")
 
       {:error, _reason} ->
         conn
