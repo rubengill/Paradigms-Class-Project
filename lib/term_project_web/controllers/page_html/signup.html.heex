@@ -1,8 +1,8 @@
-<h1 class="text-3xl font-bold text-center text-gray-900 mb-6">Sign Up</h1>
-<div class="max-w-md mx-auto bg-white rounded-lg shadow-md p-6">
+<h1 class="pt-4 text-3xl font-bold text-center text-white mb-6">Sign Up</h1>
+<div class="max-w-md mx-auto bg-gray-700 rounded-lg shadow-md p-6">
   <%= form_for @changeset, ~p"/signup", [class: "space-y-6"], fn f -> %>
     <div class="space-y-2">
-      <%= label(f, :email, class: "block text-sm font-medium text-gray-700") %>
+      <%= label(f, :email, class: "block text-sm font-medium text-white") %>
       <%= text_input(f, :email,
         class:
           "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
@@ -11,7 +11,7 @@
     </div>
 
     <div class="space-y-2">
-      <%= label(f, :full_name, class: "block text-sm font-medium text-gray-700") %>
+      <%= label(f, :full_name, class: "block text-sm font-medium text-white") %>
       <%= text_input(f, :full_name,
         class:
           "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
@@ -22,7 +22,7 @@
     </div>
 
     <div class="space-y-2">
-      <%= label(f, :password, class: "block text-sm font-medium text-gray-700") %>
+      <%= label(f, :password, class: "block text-sm font-medium text-white") %>
       <%= password_input(f, :password,
         class:
           "block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
