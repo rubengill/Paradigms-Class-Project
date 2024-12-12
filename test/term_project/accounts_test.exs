@@ -4,7 +4,7 @@ defmodule TermProject.AccountsTest do
   alias TermProject.Accounts
 
   describe "users" do
-    alias TermProject.Accounts.User
+    alias TermProject.Accounts.LoginUser
 
     import TermProject.AccountsFixtures
 
@@ -166,7 +166,7 @@ defmodule TermProject.AccountsTest do
   end
 
   describe "users" do
-    alias TermProject.Accounts.User
+    alias TermProject.Accounts.LoginUser
 
     import TermProject.AccountsFixtures
 
@@ -222,7 +222,7 @@ defmodule TermProject.AccountsTest do
   end
 
   describe "users" do
-    alias TermProject.Accounts.User
+    alias TermProject.Accounts.LoginUser
 
     import TermProject.AccountsFixtures
 
