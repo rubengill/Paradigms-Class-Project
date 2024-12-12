@@ -31,20 +31,24 @@ defmodule TermProject.GameState do
   # 12 seconds
   @iron_update_interval 120
 
-  defstruct tick: 0,
-            units: [],
-            resources: ResourceManager.initialize(),
-            bases: %{
-              1 => %{position: nil, health: 1000},
-              2 => %{position: nil, health: 1000}
-            },
-            field: %{
-              width: @field_width,
-              height: @field_height,
-              base_positions: @base_positions
-            },
-            opponent_actions: [],
-            players: %{}
+  defstruct [
+    tick: 0,
+    units: [],
+    resources: %{
+      1 => %{
+        workers: %{unused: 0, wood: 3, stone: 3, iron: 3},
+        amounts: %{wood: 200, stone: 100, iron: 20}
+      },
+      2 => %{
+        workers: %{unused: 0, wood: 3, stone: 3, iron: 3},
+        amounts: %{wood: 200, stone: 100, iron: 20}
+      }
+    },
+    bases: %{},
+    field: %{width: 1000, height: 600, base_positions: %{}},
+    opponent_actions: [],
+    players: %{}
+  ]
 
   @type t :: %__MODULE__{
           tick: integer(),
@@ -84,24 +88,55 @@ defmodule TermProject.GameState do
   end
 
   @doc """
-  Applies an action (e.g., create unit, attack) to the game state.
+  Creates a new unit and adds it to the game state.
   """
-  def apply_action(state, {:create_unit, unit_type}) do
-    unit_module = unit_module_for(unit_type)
-    stats = unit_module.stats()
-    resources = buy_unit(state.resources, unit_type)
+  def apply_action(state, {:create_unit, unit_type, player_id}) do
+    # Get player's resources
+    player_resources = get_in(state.resources, [player_id])
+    unit_cost = UnitCosts.cost(unit_type)
 
-    new_unit = %TermProject.UnitStruct{
+    if has_sufficient_resources?(player_resources.amounts, unit_cost) do
+      # Update resources
+      updated_resources = update_in(
+        state.resources,
+        [player_id, :amounts],
+        &deduct_resources(&1, unit_cost)
+      )
+
+      # Create unit with correct player_id
+      new_unit = create_unit(unit_type, player_id, state)
+
+      {:ok, %{state |
+        resources: updated_resources,
+        units: [new_unit | state.units]
+      }}
+    else
+      {:error, :insufficient_resources}
+    end
+  end
+
+  defp has_sufficient_resources?(current, cost) do
+    Enum.all?(cost, fn {resource, amount} ->
+      Map.get(current, resource, 0) >= amount
+    end)
+  end
+
+  defp deduct_resources(current, cost) do
+    Enum.reduce(cost, current, fn {resource, amount}, acc ->
+      Map.update!(acc, resource, &(&1 - amount))
+    end)
+  end
+
+  defp create_unit(unit_type, player_id, state) do
+    base_position = state.bases[player_id].position
+
+    %{
+      id: System.unique_integer([:positive]),
       type: unit_type,
-      health: stats.health,
-      damage: stats.damage,
-      range: stats.range,
-      # Add initial position
-      position: %{x: 0, y: 0}
+      health: 100,
+      owner: player_id,
+      position: base_position # Spawn at player's base position
     }
-
-    units = [new_unit | state.units]
-    %{state | resources: resources, units: units}
   end
 
   @doc """
@@ -175,23 +210,21 @@ defmodule TermProject.GameState do
   Returns:
     - The updated game state with resources adjusted according to the current tick.
   """
-  def auto_update_resources(state) do
-    # Determine which resources to update based on the tick count
-    update_wood = rem(state.tick, @wood_update_interval) == 0
-    update_stone = rem(state.tick, @stone_update_interval) == 0
-    update_iron = rem(state.tick, @iron_update_interval) == 0
+  def auto_update_resources(%{resources: resources} = state) do
+    updated_resources = Enum.reduce(resources, %{}, fn {player_id, player_resources}, acc ->
+      Map.put(acc, player_id, update_player_resources(player_resources))
+    end)
 
-    # Handle the updates
-    updated_resources =
-      ResourceManager.auto_update(
-        state.resources,
-        update_wood,
-        update_stone,
-        update_iron
-      )
+    %{state | resources: updated_resources}
+  end
 
-    # Return updated state
-    updated_resources
+  defp update_player_resources(%{workers: workers, amounts: amounts}) do
+    new_amounts = %{
+      wood: amounts.wood + (workers.wood * 2),
+      stone: amounts.stone + workers.stone,
+      iron: amounts.iron + workers.iron
+    }
+    %{workers: workers, amounts: new_amounts}
   end
 
   @doc """

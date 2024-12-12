@@ -60,11 +60,13 @@ defmodule TermProjectWeb.GameLive do
       <% else %>
         <div class="status-panel">
           <div class="resources">
-            <div>Wood: <%= @game_state.resources.amounts.wood %></div>
-
-            <div>Stone: <%= @game_state.resources.amounts.stone %></div>
-
-            <div>Iron: <%= @game_state.resources.amounts.iron %></div>
+            <%= if @game_state.resources[@player_id] do %>
+              <div>Wood: <%= @game_state.resources[@player_id].amounts.wood %></div>
+              <div>Stone: <%= @game_state.resources[@player_id].amounts.stone %></div>
+              <div>Iron: <%= @game_state.resources[@player_id].amounts.iron %></div>
+            <% else %>
+              <div>Loading resources...</div>
+            <% end %>
           </div>
 
           <div class="bases">
