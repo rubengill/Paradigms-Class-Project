@@ -22,7 +22,7 @@ defmodule TermProjectWeb.Router do
 
     live "/register", RegistrationLive, :new
     live "/login", LoginLive, :new
-    live "/game", GameLive
+    live "/game/:id", GameLive
   end
 
   # Other scopes may use custom stacks.

@@ -158,12 +158,13 @@ defmodule TermProject.Game.LobbyServer do
           lobby_id = lobby.id
           case join_lobby_internal(lobby_id, username) do
             {:ok, _lobby_id} ->
+              Phoenix.PubSub.broadcast(TermProject.PubSub, "lobby:#{lobby_id}", :lobby_updated)
               {:reply, {:ok, lobby_id}, state}
             {:error, reason} ->
               {:reply, {:error, reason}, state}
           end
       end
-  end
+end
 
   # Helper function to handle joining a lobby internally
   defp join_lobby_internal(lobby_id, username) do

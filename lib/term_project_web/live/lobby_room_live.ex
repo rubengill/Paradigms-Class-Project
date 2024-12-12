@@ -31,10 +31,10 @@ defmodule TermProjectWeb.LobbyRoomLive do
                   {:ok, assign(socket, lobby: updated_lobby, ready: false, messages: [], countdown: nil)}
 
                 {:error, :lobby_full} ->
-                  {:ok, socket |> put_flash(:error, "Lobby is full") |> redirect(to: "/")}
+                  {:ok, socket |> put_flash(:error, "Lobby is full") |> redirect(to: ~p"/?username=#{socket.assigns.username}")}
 
                 {:error, _} ->
-                  {:ok, socket |> put_flash(:error, "Could not join lobby") |> redirect(to: "/")}
+                  {:ok, socket |> put_flash(:error, "Could not join lobby") |> redirect(to: ~p"/?username=#{socket.assigns.username}")}
               end
           end
 
@@ -99,7 +99,7 @@ defmodule TermProjectWeb.LobbyRoomLive do
     username = socket.assigns.username
     case TermProject.Game.LobbyServer.close_lobby(lobby_id, username) do
       :ok ->
-        {:noreply, push_navigate(socket, to: ~p"/")}
+        {:noreply, push_navigate(socket, to: ~p"/?username=#{socket.assigns.username}")}
       {:error, :not_host} ->
         {:noreply, put_flash(socket, :error, "Only the host can close the lobby")}
       {:error, _} ->
@@ -128,7 +128,7 @@ defmodule TermProjectWeb.LobbyRoomLive do
   def handle_info(:lobby_closed, socket) do
     {:noreply, socket
       |> put_flash(:info, "Lobby was closed by the host")
-      |> push_navigate(to: ~p"/")}
+      |> push_navigate(to: ~p"/?username=#{socket.assigns.username}")}
   end
 
 
