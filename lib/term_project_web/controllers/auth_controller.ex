@@ -32,7 +32,7 @@ defmodule TermProjectWeb.AuthController do
         conn
         |> put_session(:user_id, user.id)
         |> put_flash(:info, "Logged in successfully!")
-        |> redirect(to: "/?username=bhavnoor")
+        |> redirect(to: "/?username=#{single_word(user.full_name)}")
 
       {:error, _reason} ->
         conn
@@ -44,7 +44,7 @@ defmodule TermProjectWeb.AuthController do
   def logout(conn, _params) do
     conn
     |> configure_session(drop: true)
-    |> redirect(to: "/signup")
+    |> redirect(to: "/logout")
   end
 
   # GitHub OAuth Routes
