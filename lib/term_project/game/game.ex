@@ -7,60 +7,79 @@ defmodule TermProject.Game do
   use GenServer
 
   alias TermProject.GameState
+  alias TermProject.Game.LobbyServer
   alias Phoenix.PubSub
 
   # Public API
 
   @doc """
-  Starts a new game instance for a specific match.
-  The match_id corresponds to the lobby_id from LobbyServer.
+  Starts a new game instance for a specific lobby_id.
   """
-  def start_link(match_id) do
-    GenServer.start_link(__MODULE__, %{match_id: match_id}, name: {:global, match_id})
+  def start_link(%{lobby_id: lobby_id, players: _player_mapping} = init_args) do
+    GenServer.start_link(__MODULE__, init_args, name: {:global, {:game_server, lobby_id}})
   end
 
   @doc """
   Spawns a unit for a specific player in the game.
   Broadcasts the update through PubSub to sync all players.
   """
-  def spawn_unit(match_id, unit_type, player_id) do
-    GenServer.call({:global, match_id}, {:spawn_unit, unit_type, player_id})
+  def spawn_unit(lobby_id, unit_type, player_id) do
+    GenServer.call({:global, {:game_server, lobby_id}}, {:spawn_unit, unit_type, player_id})
   end
 
   @doc """
-  Retrieves the current game state for a match.
+  Retrieves the current game state for a lobby.
   Used by clients to sync their local state.
   """
-  def get_state(match_id) do
-    GenServer.call({:global, match_id}, :get_state)
+  def get_state(lobby_id) do
+    try do
+      case :global.whereis_name({:game_server, lobby_id}) do
+        :undefined ->
+          # No game process exists
+          {:error, :game_not_found}
+
+        pid when is_pid(pid) ->
+          # Call with timeout
+          case GenServer.call(pid, :get_state, 5000) do
+            game_state -> {:ok, game_state}
+          end
+      end
+    catch
+      :exit, _ -> {:error, :game_not_available}
+    end
   end
 
   # GenServer Callbacks
 
+  # In game.ex
   @impl true
-  def init(%{match_id: match_id}) do
-    # Initialize game state when lobby transitions to "playing" state
+  def init(%{lobby_id: lobby_id, players: player_mapping}) do
+    # Debug
+    IO.puts("#{DateTime.utc_now()} - Game server init starting")
+    IO.inspect(player_mapping, label: "Player mapping in init")
+
+    game_state = GameState.new()
+
     initial_state = %{
-      match_id: match_id,  # Same as lobby_id for correlation
-      game_state: GameState.new(),
-      players: %{}  # Populated from lobby players
+      lobby_id: lobby_id,
+      # Update GameState with players
+      game_state: %{game_state | players: player_mapping},
+      players: player_mapping
     }
 
-    # Subscribe to two PubSub channels:
-    # "game:#{match_id}" - For game-specific events (unit spawns, combat, etc)
-    # "lobby:#{match_id}" - For lobby events (player joins/leaves, game start/end)
-    PubSub.subscribe(TermProject.PubSub, "game:#{match_id}")
-    PubSub.subscribe(TermProject.PubSub, "lobby:#{match_id}")
+    IO.inspect(initial_state, label: "Initial game state")
+
+    PubSub.subscribe(TermProject.PubSub, "game:#{lobby_id}")
+    Process.flag(:trap_exit, true)
 
     {:ok, initial_state}
   end
 
   @impl true
-  def handle_call({:spawn_unit, unit_type, player_id}, _from, state) do
-    updated_state = GameState.apply_action(state.game_state, {:create_unit, unit_type})
-    broadcast_game_update(state.match_id, updated_state)
-
-    {:reply, :ok, %{state | game_state: updated_state}}
+  def handle_call({:spawn_unit, unit_type, _player_id}, _from, state) do
+    updated_game_state = GameState.apply_action(state.game_state, {:create_unit, unit_type})
+    broadcast_game_update(state.lobby_id, updated_game_state)
+    {:reply, :ok, %{state | game_state: updated_game_state}}
   end
 
   @impl true
@@ -69,32 +88,153 @@ defmodule TermProject.Game do
   end
 
   @impl true
-  def handle_info({:player_action, player_id, action}, state) do
-    updated_state = GameState.apply_action(state.game_state, action)
-    broadcast_game_update(state.match_id, updated_state)
-
-    {:noreply, %{state | game_state: updated_state}}
+  def handle_info({:player_action, _player_id, action}, state) do
+    updated_game_state = GameState.apply_action(state.game_state, action)
+    broadcast_game_update(state.lobby_id, updated_game_state)
+    {:noreply, %{state | game_state: updated_game_state}}
   end
 
   @impl true
   def handle_info(:game_started, state) do
-    # Initialize game state when all players are ready
+    # Update state if needed at game start
     {:noreply, state}
   end
 
   @impl true
   def handle_info(:game_ended, state) do
-    # Clean up game state
+    # Clean up game state if necessary
     {:stop, :normal, state}
   end
 
   # Private Helpers
-
-  defp broadcast_game_update(match_id, game_state) do
-    PubSub.broadcast(
+  defp broadcast_game_update(lobby_id, game_state) do
+    Phoenix.PubSub.broadcast(
       TermProject.PubSub,
-      "game:#{match_id}",
+      "game:#{lobby_id}",
       {:game_state_update, game_state}
     )
   end
 end
+
+# defmodule TermProject.Game do
+#   @moduledoc """
+#   Handles the core game logic and state for each game instance.
+#   Uses PubSub for state synchronization through lobby channels.
+#   """
+
+#   use GenServer
+
+#   alias TermProject.GameState
+#   alias TermProject.Game.LobbyServer
+#   alias Phoenix.PubSub
+
+#   # Public API
+
+#   @doc """
+#   Starts a new game instance for a specific lobby_id.
+#   """
+#   def start_link(lobby_id) do
+#     GenServer.start_link(__MODULE__, %{lobby_id: lobby_id},
+#       name: {:global, {:game_server, lobby_id}}
+#     )
+#   end
+
+#   @doc """
+#   Spawns a unit for a specific player in the game.
+#   Broadcasts the update through PubSub to sync all players.
+#   """
+#   def spawn_unit(lobby_id, unit_type, player_id) do
+#     GenServer.call({:global, {:game_server, lobby_id}}, {:spawn_unit, unit_type, player_id})
+#   end
+
+#   @doc """
+#   Retrieves the current game state for a lobby.
+#   Used by clients to sync their local state.
+#   """
+#   def get_state(lobby_id) do
+#     try do
+#       case :global.whereis_name({:game_server, lobby_id}) do
+#         :undefined ->
+#           # No game process exists
+#           {:error, :game_not_found}
+
+#         pid when is_pid(pid) ->
+#           # Call with timeout
+#           case GenServer.call(pid, :get_state, 5000) do
+#             game_state -> {:ok, game_state}
+#           end
+#       end
+#     catch
+#       :exit, _ -> {:error, :game_not_available}
+#     end
+#   end
+
+#   # GenServer Callbacks
+
+#   @impl true
+#   def init(%{lobby_id: lobby_id}) do
+#     # Get lobby info
+#     {:ok, lobby} = LobbyServer.get_lobby(lobby_id)
+
+#     # Map players to sides (player 1 = host, player 2 = other player)
+#     [host | others] = Map.keys(lobby.players)
+
+#     player_mapping = %{
+#       1 => host,
+#       2 => Enum.at(others, 0)
+#     }
+
+#     # Initialize state with player info
+#     initial_state = %{
+#       lobby_id: lobby_id,
+#       game_state: GameState.new(),
+#       players: player_mapping
+#     }
+
+#     # Subscribe to updates
+#     PubSub.subscribe(TermProject.PubSub, "game:#{lobby_id}")
+#     Process.flag(:trap_exit, true)
+
+#     {:ok, initial_state}
+#   end
+
+#   @impl true
+#   def handle_call({:spawn_unit, unit_type, _player_id}, _from, state) do
+#     updated_game_state = GameState.apply_action(state.game_state, {:create_unit, unit_type})
+#     broadcast_game_update(state.lobby_id, updated_game_state)
+#     {:reply, :ok, %{state | game_state: updated_game_state}}
+#   end
+
+#   @impl true
+#   def handle_call(:get_state, _from, state) do
+#     {:reply, state.game_state, state}
+#   end
+
+#   @impl true
+#   def handle_info({:player_action, _player_id, action}, state) do
+#     updated_game_state = GameState.apply_action(state.game_state, action)
+#     broadcast_game_update(state.lobby_id, updated_game_state)
+#     {:noreply, %{state | game_state: updated_game_state}}
+#   end
+
+#   @impl true
+#   def handle_info(:game_started, state) do
+#     # Update state if needed at game start
+#     {:noreply, state}
+#   end
+
+#   @impl true
+#   def handle_info(:game_ended, state) do
+#     # Clean up game state if necessary
+#     {:stop, :normal, state}
+#   end
+
+#   # Private Helpers
+#   defp broadcast_game_update(lobby_id, game_state) do
+#     Phoenix.PubSub.broadcast(
+#       TermProject.PubSub,
+#       "game:#{lobby_id}",
+#       {:game_state_update, game_state}
+#     )
+#   end
+# end

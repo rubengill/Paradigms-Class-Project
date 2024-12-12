@@ -17,14 +17,19 @@ defmodule TermProject.GameState do
 
   # Base positions
   @base_positions %{
-    1 => %{x: 0, y: @field_height/2},     # Left side
-    2 => %{x: 1000, y: @field_height/2}   # Right side
+    # Left side
+    1 => %{x: 0, y: @field_height / 2},
+    # Right side
+    2 => %{x: 1000, y: @field_height / 2}
   }
 
   # Resource update intervals (based off of 100ms tick speed)
-  @wood_update_interval 50  # 5 seconds
-  @stone_update_interval 70 # 7 seconds
-  @iron_update_interval 120 # 12 seconds
+  # 5 seconds
+  @wood_update_interval 50
+  # 7 seconds
+  @stone_update_interval 70
+  # 12 seconds
+  @iron_update_interval 120
 
   defstruct tick: 0,
             units: [],
@@ -38,7 +43,8 @@ defmodule TermProject.GameState do
               height: @field_height,
               base_positions: @base_positions
             },
-            opponent_actions: []
+            opponent_actions: [],
+            players: %{}
 
   @type t :: %__MODULE__{
           tick: integer(),
@@ -46,18 +52,34 @@ defmodule TermProject.GameState do
           resources: map(),
           bases: map(),
           field: map(),
-          opponent_actions: list()
+          opponent_actions: list(),
+          players: map()
         }
+
+  @doc """
+  Creates a new game state with default values.
+  """
+
+  # Add this after the @type definition:
 
   @doc """
   Creates a new game state with default values.
   """
   def new do
     %__MODULE__{
+      tick: 0,
+      units: [],
+      resources: ResourceManager.initialize(),
       bases: %{
         1 => %{position: @base_positions[1], health: 1000},
         2 => %{position: @base_positions[2], health: 1000}
-      }
+      },
+      field: %{
+        width: @field_width,
+        height: @field_height,
+        base_positions: @base_positions
+      },
+      opponent_actions: []
     }
   end
 
@@ -65,12 +87,20 @@ defmodule TermProject.GameState do
   Applies an action (e.g., create unit, attack) to the game state.
   """
   def apply_action(state, {:create_unit, unit_type}) do
-    # Dynamically create a unit using its module
     unit_module = unit_module_for(unit_type)
-    unit_stats = unit_module.stats()
+    stats = unit_module.stats()
     resources = buy_unit(state.resources, unit_type)
 
-    units = [%{unit_stats | type: unit_type} | state.units]
+    new_unit = %TermProject.UnitStruct{
+      type: unit_type,
+      health: stats.health,
+      damage: stats.damage,
+      range: stats.range,
+      # Add initial position
+      position: %{x: 0, y: 0}
+    }
+
+    units = [new_unit | state.units]
     %{state | resources: resources, units: units}
   end
 
@@ -103,7 +133,9 @@ defmodule TermProject.GameState do
 
     # Deduct resources
     case ResourceManager.deduct(resources, costs) do
-      {:ok, updated_resources} -> updated_resources
+      {:ok, updated_resources} ->
+        updated_resources
+
       {:error, :insufficient_resources} ->
         IO.puts("Not enough resources to create #{unit_type}!")
         resources
@@ -125,7 +157,9 @@ defmodule TermProject.GameState do
 
     # Deduct resources
     case ResourceManager.deduct(resources, costs) do
-      {:ok, updated_resources} -> updated_resources
+      {:ok, updated_resources} ->
+        updated_resources
+
       {:error, :insufficient_resources} ->
         IO.puts("Not enough resources to add new workers!")
         resources
@@ -148,12 +182,13 @@ defmodule TermProject.GameState do
     update_iron = rem(state.tick, @iron_update_interval) == 0
 
     # Handle the updates
-    updated_resources = ResourceManager.auto_update(
-      state.resources,
-      update_wood,
-      update_stone,
-      update_iron
-    )
+    updated_resources =
+      ResourceManager.auto_update(
+        state.resources,
+        update_wood,
+        update_stone,
+        update_iron
+      )
 
     # Return updated state
     updated_resources
@@ -169,7 +204,8 @@ defmodule TermProject.GameState do
   Returns:
     - The updated resource map with the worker moved to the `:unused` pool.
   """
-  def add_worker_to_unused(resources, from), do: ResourceManager.redistribute_worker(resources, from, :unused)
+  def add_worker_to_unused(resources, from),
+    do: ResourceManager.redistribute_worker(resources, from, :unused)
 
   @doc """
   Moves a worker from the `:unused` pool to a specified resource.
@@ -181,5 +217,6 @@ defmodule TermProject.GameState do
   Returns:
     - The updated resource map with the worker added to the specified resource.
   """
-  def add_worker_to_resource(resources, to), do: ResourceManager.redistribute_worker(resources, :unused, to)
+  def add_worker_to_resource(resources, to),
+    do: ResourceManager.redistribute_worker(resources, :unused, to)
 end

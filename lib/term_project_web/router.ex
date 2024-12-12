@@ -33,7 +33,7 @@ defmodule TermProjectWeb.Router do
 
     live "/register", RegistrationLive, :new
     live "/login", LoginLive, :new
-    live "/game/:id", GameLive
+    live "/game/:lobby_id", GameLive, :show
 
     get "/logout", LogoutController, :logout
   end
