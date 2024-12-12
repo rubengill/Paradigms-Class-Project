@@ -16,7 +16,7 @@ defmodule TermProject.Game do
   The match_id corresponds to the lobby_id from LobbyServer.
   """
   def start_link(match_id) do
-    GenServer.start_link(__MODULE__, %{match_id: match_id}, name: via_tuple(match_id))
+    GenServer.start_link(__MODULE__, %{match_id: match_id}, name: {:global, match_id})
   end
 
   @doc """
@@ -24,7 +24,7 @@ defmodule TermProject.Game do
   Broadcasts the update through PubSub to sync all players.
   """
   def spawn_unit(match_id, unit_type, player_id) do
-    GenServer.call(via_tuple(match_id), {:spawn_unit, unit_type, player_id})
+    GenServer.call({:global, match_id}, {:spawn_unit, unit_type, player_id})
   end
 
   @doc """
@@ -32,7 +32,7 @@ defmodule TermProject.Game do
   Used by clients to sync their local state.
   """
   def get_state(match_id) do
-    GenServer.call(via_tuple(match_id), :get_state)
+    GenServer.call({:global, match_id}, :get_state)
   end
 
   # GenServer Callbacks
@@ -59,7 +59,7 @@ defmodule TermProject.Game do
   def handle_call({:spawn_unit, unit_type, player_id}, _from, state) do
     updated_state = GameState.apply_action(state.game_state, {:create_unit, unit_type})
     broadcast_game_update(state.match_id, updated_state)
-    
+
     {:reply, :ok, %{state | game_state: updated_state}}
   end
 
@@ -72,7 +72,7 @@ defmodule TermProject.Game do
   def handle_info({:player_action, player_id, action}, state) do
     updated_state = GameState.apply_action(state.game_state, action)
     broadcast_game_update(state.match_id, updated_state)
-    
+
     {:noreply, %{state | game_state: updated_state}}
   end
 
@@ -89,10 +89,6 @@ defmodule TermProject.Game do
   end
 
   # Private Helpers
-
-  defp via_tuple(match_id) do
-    {:via, Registry, {TermProject.GameRegistry, match_id}}
-  end
 
   defp broadcast_game_update(match_id, game_state) do
     PubSub.broadcast(
