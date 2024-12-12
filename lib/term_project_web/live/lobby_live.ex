@@ -11,23 +11,35 @@ defmodule TermProjectWeb.LobbyLive do
         Phoenix.PubSub.subscribe(TermProject.PubSub, "global_chat")
         Phoenix.PubSub.subscribe(TermProject.PubSub, "lobbies")
       end
-      {:ok, assign(socket,
-                   lobbies: TermProject.Game.LobbyServer.list_lobbies(),
-                   messages: [],
-                   username: username,
-                   is_private: false)}
+
+      {:ok,
+       assign(socket,
+         lobbies: TermProject.Game.LobbyServer.list_lobbies(),
+         messages: [],
+         username: username,
+         is_private: false
+       )}
     end
   end
 
   # Event Handlers
   def handle_event("create_lobby", params, socket) do
     max_players = params["max_players"]
-    password = Map.get(params, "password")
     is_private = Map.get(params, "is_private", "false")
     username = params["username"]
 
-    password = if is_private == "true", do: password, else: nil
-    {:ok, lobby_id} = TermProject.Game.LobbyServer.create_lobby(String.to_integer(max_players), password)
+    # Only get password for private lobbies
+    password =
+      case is_private do
+        "true" -> Map.get(params, "password")
+        _ -> nil
+      end
+
+    {:ok, lobby_id} =
+      TermProject.Game.LobbyServer.create_lobby(
+        String.to_integer(max_players),
+        password
+      )
 
     case TermProject.Game.LobbyServer.join_lobby(lobby_id, username, password) do
       :ok ->
@@ -58,11 +70,14 @@ defmodule TermProjectWeb.LobbyLive do
     case TermProject.Game.LobbyServer.find_and_join_lobby(username) do
       {:ok, lobby_id} ->
         {:noreply, redirect(socket, to: ~p"/lobby/#{lobby_id}?username=#{URI.encode(username)}")}
+
       {:error, :no_available_lobby} ->
-        max_players = 2  # Default value
+        # Default value
+        max_players = 2
         {:ok, lobby_id} = TermProject.Game.LobbyServer.create_lobby(max_players)
         :ok = TermProject.Game.LobbyServer.join_lobby(lobby_id, username)
         {:noreply, redirect(socket, to: ~p"/lobby/#{lobby_id}?username=#{URI.encode(username)}")}
+
       {:error, reason} ->
         {:noreply, put_flash(socket, :error, "Matchmaking failed: #{inspect(reason)}")}
     end
