@@ -1,286 +1,328 @@
-<!DOCTYPE html>
+<%!--  --%> <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Chat</title>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Chat</title>
+  </head>
+  <body>
+    <div class="bg-white text-gray-900 dark:bg-gray-900 dark:text-gray-100">
+      <div class="max-w-4xl mx-auto p-8">
+        <h1 class="text-3xl font-bold text-center mb-8">Lobby #<%= @lobby.id %></h1>
 
-</head>
-<body>
-<div class="lobby-container">
-  <h1 class="lobby-title">Lobby #<%= @lobby.id %></h1>
+        <%= if @need_password do %>
+          <div class="bg-gray-100 dark:bg-gray-800 p-6 rounded-lg shadow-md">
+            <h2 class="text-lg font-semibold mb-4 text-white">
+              This lobby is Password-Protected.
+            </h2>
+            <form phx-submit="submit_password" class="space-y-4">
+              <div class="form-group">
+                <label class="block mb-1">Password:</label>
+                <input
+                  class="w-full p-2 border rounded-md focus:ring focus:ring-blue-500 focus:outline-none"
+                  type="password"
+                  name="password"
+                  required
+                />
+              </div>
+              <button
+                type="submit"
+                class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg"
+              >
+                Join Lobby
+              </button>
+            </form>
+          </div>
+        <% else %>
+          <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-md">
+            <div class="text-xl font-semibold text-center mb-6">
+              <h2>Welcome, <%= @username %>!</h2>
+              <%= if @lobby.host == @username do %>
+                <p class="inline-block bg-purple-500 text-white py-1 px-3 rounded-full text-sm mt-2">
+                  Host
+                </p>
+                <button
+                  class="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded-lg mt-4"
+                  phx-click="close_lobby"
+                >
+                  Close Lobby
+                </button>
+              <% end %>
+              <p class="mt-4 text-md">
+                Status:
+                <span class={"status-badge #{if @ready, do: "ready", else: "not-ready"}"}>
+                  <%= if @ready, do: "Ready", else: "Not Ready" %>
+                </span>
+              </p>
+            </div>
 
-  <%= if @need_password do %>
-    <div class="password-prompt">
-      <h2>This lobby is Password-Protected.</h2>
-      <form phx-submit="submit_password">
-        <div class="form-group">
-          <label>Password:</label>
-          <input type="password" name="password" required />
-        </div>
-        <button type="submit" class="join-button">Join Lobby</button>
-      </form>
-    </div>
-  <% else %>
-    <div class="player-section">
-      <div class="welcome-message">
-        <h2>Welcome, <%= @username %>!</h2>
-        <%= if @lobby.host == @username do %>
-          <p class="host-badge">Host</p>
-          <button class="close-button" phx-click="close_lobby">
-            Close Lobby
-          </button>
-        <% end %>
-        <p class="status-text">
-          Status: <span class={"status-badge #{if @ready, do: "ready", else: "not-ready"}"}>
-            <%= if @ready, do: "Ready", else: "Not Ready" %>
-          </span>
-        </p>
-      </div>
+            <button
+              class={"ready-toggle #{if @ready, do: "ready", else: "not-ready"}"}
+              phx-click="toggle_ready"
+            >
+              <%= if @ready, do: "Set Not Ready", else: "Set Ready" %>
+            </button>
 
-      <button class={"ready-toggle #{if @ready, do: "ready", else: "not-ready"}"} phx-click="toggle_ready">
-        <%= if @ready, do: "Set Not Ready", else: "Set Ready" %>
-      </button>
-
-      <div class="players-list">
-        <h2>Players</h2>
-        <div class="player-cards">
-          <%= for {player, info} <- @lobby.players do %>
-            <div class="player-card">
-              <div class="player-name"><%= player %></div>
-              <div class={"player-status #{if info.ready, do: "ready", else: "not-ready"}"}>
-                <%= if info.ready, do: "Ready", else: "Not Ready" %>
+            <div class="players-list">
+              <h2>Players</h2>
+              <div class="player-cards">
+                <%= for {player, info} <- @lobby.players do %>
+                  <div class="player-card">
+                    <div class="player-name"><%= player %></div>
+                    <div class={"player-status #{if info.ready, do: "ready", else: "not-ready"}"}>
+                      <%= if info.ready, do: "Ready", else: "Not Ready" %>
+                    </div>
+                  </div>
+                <% end %>
               </div>
             </div>
+          </div>
+        <% end %>
+
+        <div class="countdown-section">
+          <%= if @countdown do %>
+            <p>Game starting in <%= @countdown %> seconds...</p>
           <% end %>
         </div>
       </div>
+      <!-- chat_live.html.heex -->
+      <div id="chat-container" class="max-w-4xl mx-auto mt-8">
+        <div
+          class="h-72 overflow-y-auto border border-gray-300 dark:border-gray-700 rounded-lg p-4 bg-gray-50 dark:bg-gray-800"
+          id="messages"
+        >
+          <%= for msg <- @messages do %>
+            <p><strong><%= msg.user %>:</strong> <%= msg.body %></p>
+          <% end %>
+        </div>
+        <!-- Form to handle message sending -->
+        <form phx-submit="send_message" class="mt-4 flex items-center space-x-2">
+          <input
+            type="text"
+            id="messageInput"
+            name="message"
+            placeholder="Type your message here..."
+            phx-hook="EmojiInput"
+            class="text-black flex-grow p-2 border border-gray-300 dark:border-gray-700 rounded-lg focus:ring focus:ring-blue-500 focus:outline-none"
+          />
+          <button
+            class="py-2 px-3 bg-gray-200 dark:bg-gray-700 rounded-lg"
+            type="button"
+            id="emoji-button"
+            phx-hook="EmojiButton"
+          >
+            😊
+          </button>
+          <button
+            type="submit"
+            class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg"
+          >
+            Send
+          </button>
+          <!-- Send Button -->
+        </form>
+        <!-- Emoji Picker Element -->
+        <div id="picker" style="display: none;" phx-hook="EmojiPicker"></div>
+      </div>
+
+      <style>
+        .lobby-container {
+          max-width: 800px;
+          margin: 0 auto;
+          padding: 2rem;
+        }
+
+        .lobby-title {
+          color: #2d3748;
+          font-size: 2rem;
+          text-align: center;
+          margin-bottom: 2rem;
+        }
+
+        .player-section {
+          background: white;
+          border-radius: 8px;
+          padding: 2rem;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .welcome-message {
+          text-align: center;
+          margin-bottom: 2rem;
+        }
+
+        .status-badge {
+          display: inline-block;
+          padding: 0.25rem 0.75rem;
+          border-radius: 9999px;
+          font-size: 0.875rem;
+          font-weight: 500;
+        }
+
+        .status-badge.ready {
+          background: #c6f6d5;
+          color: #2f855a;
+        }
+
+        .status-badge.not-ready {
+          background: #fed7d7;
+          color: #c53030;
+        }
+
+        .ready-toggle {
+          width: 100%;
+          padding: 0.75rem;
+          border: none;
+          border-radius: 4px;
+          font-size: 1rem;
+          cursor: pointer;
+          transition: all 0.2s;
+          margin-bottom: 2rem;
+        }
+
+        .ready-toggle.ready {
+          background: #f56565;
+          color: white;
+        }
+
+        .ready-toggle.ready:hover {
+          background: #c53030;
+        }
+
+        .ready-toggle.not-ready {
+          background: #48bb78;
+          color: white;
+        }
+
+        .ready-toggle.not-ready:hover {
+          background: #38a169;
+        }
+
+        .players-list {
+          margin-top: 2rem;
+        }
+
+        .players-list h2 {
+          color: #2d3748;
+          margin-bottom: 1rem;
+        }
+
+        .player-cards {
+          display: grid;
+          grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+          gap: 1rem;
+        }
+
+        .player-card {
+          background: #f7fafc;
+          border-radius: 6px;
+          padding: 1rem;
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          border: 1px solid #e2e8f0;
+        }
+
+        .player-name {
+          font-weight: 500;
+          color: #2d3748;
+        }
+
+        .player-status {
+          font-size: 0.875rem;
+          padding: 0.25rem 0.5rem;
+          border-radius: 9999px;
+        }
+
+        .player-status.ready {
+          background: #c6f6d5;
+          color: #2f855a;
+        }
+
+        .player-status.not-ready {
+          background: #fed7d7;
+          color: #c53030;
+        }
+
+        .join-section {
+          max-width: 400px;
+          margin: 0 auto;
+          background: white;
+          padding: 2rem;
+          border-radius: 8px;
+          box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .join-section h2 {
+          color: #2d3748;
+          text-align: center;
+          margin-bottom: 1.5rem;
+        }
+
+        .join-form {
+          display: flex;
+          flex-direction: column;
+          gap: 1.5rem;
+        }
+
+        .form-group {
+          display: flex;
+          flex-direction: column;
+          gap: 0.5rem;
+        }
+
+        .form-group label {
+          color: #4a5568;
+          font-size: 0.875rem;
+        }
+
+        .username-input {
+          padding: 0.5rem;
+          border: 1px solid #e2e8f0;
+          border-radius: 4px;
+          font-size: 1rem;
+        }
+
+        .join-button {
+          background: #4299e1;
+          color: white;
+          padding: 0.75rem;
+          border: none;
+          border-radius: 4px;
+          font-size: 1rem;
+          cursor: pointer;
+          transition: background-color 0.2s;
+        }
+
+        .join-button:hover {
+          background: #2b6cb0;
+        }
+
+        .host-badge {
+          display: inline-block;
+          background: #805ad5;
+          color: white;
+          padding: 0.25rem 0.75rem;
+          border-radius: 9999px;
+          font-size: 0.875rem;
+          margin: 0.5rem 0;
+        }
+
+        .close-button {
+          background: #e53e3e;
+          color: white;
+          padding: 0.5rem 1rem;
+          border: none;
+          border-radius: 4px;
+          font-size: 0.875rem;
+          cursor: pointer;
+          transition: background-color 0.2s;
+          margin-top: 1rem;
+        }
+
+        .close-button:hover {
+          background: #c53030;
+        }
+      </style>
     </div>
-  <% end %>
-
-  <div class="countdown-section">
-    <%= if @countdown do %>
-      <p>Game starting in <%= @countdown %> seconds...</p>
-    <% end %>
-  </div>
-  
-</div>
-
-<!-- chat_live.html.heex -->
-<div id="chat-container">
-  <div id="messages" style="height: 300px; overflow-y: auto; border: 1px solid #ccc; margin-bottom: 10px; padding: 5px;">
-    <%= for msg <- @messages do %>
-      <p><strong><%= msg.user %>:</strong> <%= msg.body %></p>
-    <% end %>
-  </div>
-  <!-- Form to handle message sending -->
-  <form phx-submit="send_message">
-    <input type="text" id="messageInput" name="message" placeholder="Type your message here..." phx-hook="EmojiInput">
-    <button type="button" id="emoji-button" phx-hook="EmojiButton">😊</button>
-    <button type="submit">Send</button> <!-- Send Button -->
-  </form>
-  <!-- Emoji Picker Element -->
-  <div id="picker" style="display: none;" phx-hook="EmojiPicker"></div>
-</div>
-
-
-<style>
-  .lobby-container {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 2rem;
-  }
-
-  .lobby-title {
-    color: #2d3748;
-    font-size: 2rem;
-    text-align: center;
-    margin-bottom: 2rem;
-  }
-
-  .player-section {
-    background: white;
-    border-radius: 8px;
-    padding: 2rem;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-
-  .welcome-message {
-    text-align: center;
-    margin-bottom: 2rem;
-  }
-
-  .status-badge {
-    display: inline-block;
-    padding: 0.25rem 0.75rem;
-    border-radius: 9999px;
-    font-size: 0.875rem;
-    font-weight: 500;
-  }
-
-  .status-badge.ready {
-    background: #c6f6d5;
-    color: #2f855a;
-  }
-
-  .status-badge.not-ready {
-    background: #fed7d7;
-    color: #c53030;
-  }
-
-  .ready-toggle {
-    width: 100%;
-    padding: 0.75rem;
-    border: none;
-    border-radius: 4px;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: all 0.2s;
-    margin-bottom: 2rem;
-  }
-
-  .ready-toggle.ready {
-    background: #f56565;
-    color: white;
-  }
-
-  .ready-toggle.ready:hover {
-    background: #c53030;
-  }
-
-  .ready-toggle.not-ready {
-    background: #48bb78;
-    color: white;
-  }
-
-  .ready-toggle.not-ready:hover {
-    background: #38a169;
-  }
-
-  .players-list {
-    margin-top: 2rem;
-  }
-
-  .players-list h2 {
-    color: #2d3748;
-    margin-bottom: 1rem;
-  }
-
-  .player-cards {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-    gap: 1rem;
-  }
-
-  .player-card {
-    background: #f7fafc;
-    border-radius: 6px;
-    padding: 1rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    border: 1px solid #e2e8f0;
-  }
-
-  .player-name {
-    font-weight: 500;
-    color: #2d3748;
-  }
-
-  .player-status {
-    font-size: 0.875rem;
-    padding: 0.25rem 0.5rem;
-    border-radius: 9999px;
-  }
-
-  .player-status.ready {
-    background: #c6f6d5;
-    color: #2f855a;
-  }
-
-  .player-status.not-ready {
-    background: #fed7d7;
-    color: #c53030;
-  }
-
-  .join-section {
-    max-width: 400px;
-    margin: 0 auto;
-    background: white;
-    padding: 2rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  }
-
-  .join-section h2 {
-    color: #2d3748;
-    text-align: center;
-    margin-bottom: 1.5rem;
-  }
-
-  .join-form {
-    display: flex;
-    flex-direction: column;
-    gap: 1.5rem;
-  }
-
-  .form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-  }
-
-  .form-group label {
-    color: #4a5568;
-    font-size: 0.875rem;
-  }
-
-  .username-input {
-    padding: 0.5rem;
-    border: 1px solid #e2e8f0;
-    border-radius: 4px;
-    font-size: 1rem;
-  }
-
-  .join-button {
-    background: #4299e1;
-    color: white;
-    padding: 0.75rem;
-    border: none;
-    border-radius: 4px;
-    font-size: 1rem;
-    cursor: pointer;
-    transition: background-color 0.2s;
-  }
-
-  .join-button:hover {
-    background: #2b6cb0;
-  }
-
-  .host-badge {
-    display: inline-block;
-    background: #805ad5;
-    color: white;
-    padding: 0.25rem 0.75rem;
-    border-radius: 9999px;
-    font-size: 0.875rem;
-    margin: 0.5rem 0;
-  }
-
-  .close-button {
-    background: #e53e3e;
-    color: white;
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: 4px;
-    font-size: 0.875rem;
-    cursor: pointer;
-    transition: background-color 0.2s;
-    margin-top: 1rem;
-  }
-
-  .close-button:hover {
-    background: #c53030;
-  }
-</style>
-</body>
+  </body>
 </html>

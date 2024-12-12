@@ -1,4 +1,4 @@
-<div class="container">
+<%!-- <div class="container">
   <h1 class="page-title">Game Lobbies</h1>
 
   <!-- Create Lobby Section -->
@@ -195,4 +195,137 @@
     cursor: pointer;
     transition: background-color 0.2s;
   }
-</style>
+</style> --%>
+
+<div class="container mx-auto max-w-5xl p-8">
+  <h1 class="page-title text-4xl font-bold text-center mb-8 text-gray-800 dark:text-gray-100">
+    Game Lobbies
+  </h1>
+  <!-- Create Lobby Section -->
+  <div class="create-lobby-section max-w-md mx-auto p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md border border-gray-200 dark:border-gray-700">
+    <h2 class="text-2xl font-semibold text-center text-gray-800 dark:text-gray-100 mb-6">
+      Create New Lobby
+    </h2>
+    <form
+      phx-submit="create_lobby"
+      phx-change="toggle_private"
+      class="create-lobby-form flex flex-col gap-4"
+    >
+      <div class="form-group flex flex-col gap-2">
+        <label class="text-gray-700 dark:text-gray-300">Maximum Players:</label>
+        <select
+          name="max_players"
+          class="select-input p-2 border rounded-md bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200"
+        >
+          <option value="2">2 Players</option>
+        </select>
+      </div>
+
+      <input type="hidden" name="is_private" value="false" />
+      <label class="flex items-center gap-2 text-gray-700 dark:text-gray-300">
+        <input
+          type="checkbox"
+          name="is_private"
+          value="true"
+          checked={@is_private}
+          class="accent-blue-600"
+        /> Private Lobby
+      </label>
+
+      <div
+        class="form-group flex flex-col gap-2"
+        style={"display: #{if @is_private, do: "block", else: "none"};"}
+      >
+        <label class="text-gray-700 dark:text-gray-300">Private Lobby Password</label>
+        <input
+          type="password"
+          name="password"
+          class="password-input p-2 border rounded-md bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200"
+          disabled="!@is_private"
+        />
+      </div>
+
+      <input type="hidden" name="username" value={@username} />
+      <div class="form-buttons flex gap-4">
+        <button
+          type="submit"
+          class="create-button bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded-md"
+        >
+          Create Lobby
+        </button>
+        <button
+          phx-click="matchmaking"
+          class="matchmaking-button bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md"
+        >
+          Matchmaking
+        </button>
+      </div>
+    </form>
+  </div>
+
+  <br />
+  <!-- Lobby List Section -->
+  <div class="lobby-list grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+    <%= for lobby <- @lobbies do %>
+      <div class="lobby-card bg-white dark:bg-gray-800 rounded-lg shadow-md p-4 border border-gray-200 dark:border-gray-700">
+        <div class="lobby-info">
+          <h3 class="text-lg font-semibold text-gray-800 dark:text-gray-100">
+            Lobby #<%= lobby.id %>
+          </h3>
+          <p class="player-count text-sm text-gray-600 dark:text-gray-400">
+            Players:
+            <span class="count font-bold text-blue-600 dark:text-blue-400">
+              <%= map_size(lobby.players) %>/<%= lobby.max_players %>
+            </span>
+          </p>
+          <%= if Map.has_key?(lobby, :password) do %>
+            <p class="password-protected text-sm text-gray-600 dark:text-gray-400">
+              🔒 Password Protected
+            </p>
+          <% end %>
+        </div>
+        <.link
+          class="join-button bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md mt-4 inline-block"
+          navigate={~p"/lobby/#{lobby.id}?username=#{URI.encode(@username)}"}
+        >
+          Join
+        </.link>
+      </div>
+    <% end %>
+  </div>
+  <!-- Chat Section -->
+  <div id="chat-container">
+    <div
+      id="messages"
+      class="h-72 overflow-y-auto border border-gray-200 dark:border-gray-700 rounded-md mb-4 p-4 bg-gray-50 dark:bg-gray-800"
+    >
+      <%= for msg <- @messages do %>
+        <p class="text-gray-800 dark:text-gray-100">
+          <strong><%= msg.user %>:</strong> <%= msg.body %>
+        </p>
+      <% end %>
+    </div>
+    <form phx-submit="send_message" class="flex gap-2">
+      <input
+        type="text"
+        id="messageInput"
+        name="message"
+        placeholder="Type your message here..."
+        phx-hook="EmojiInput"
+        class="flex-1 p-2 border rounded-md bg-gray-50 dark:bg-gray-700 border-gray-300 dark:border-gray-600 text-gray-800 dark:text-gray-200"
+      />
+      <button
+        type="button"
+        id="emoji-button"
+        phx-hook="EmojiButton"
+        class="p-2 rounded-md bg-gray-200 dark:bg-gray-700"
+      >
+        😊
+      </button>
+      <button type="submit" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md">
+        Send
+      </button>
+    </form>
+    <div id="picker" class="hidden" phx-hook="EmojiPicker"></div>
+  </div>
+</div>

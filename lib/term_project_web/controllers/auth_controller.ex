@@ -10,12 +10,12 @@ defmodule TermProjectWeb.AuthController do
     render(conn, "signup.html", changeset: changeset)
   end
 
-  def create(conn, %{"user" => user_params}) do
+  def create(conn, %{"login_user" => user_params}) do
     case Accounts.create_user(user_params) do
-      {:ok, _user} ->
+      {:ok, user} ->
         conn
         |> put_flash(:info, "Account created successfully!")
-        |> redirect(to: "/login")
+        |> redirect(to: "/?username=#{single_word(user.full_name)}")
 
       {:error, changeset} ->
         render(conn, "signup.html", changeset: changeset)
@@ -32,19 +32,19 @@ defmodule TermProjectWeb.AuthController do
         conn
         |> put_session(:user_id, user.id)
         |> put_flash(:info, "Logged in successfully!")
-        |> redirect(to: "/login")
+        |> redirect(to: "/?username=#{single_word(user.full_name)}")
 
       {:error, _reason} ->
         conn
         |> put_flash(:error, "Invalid email or password")
-        |> redirect(to: "/login")
+        |> redirect(to: "/signup")
     end
   end
 
   def logout(conn, _params) do
     conn
     |> configure_session(drop: true)
-    |> redirect(to: "/login")
+    |> redirect(to: "/logout")
   end
 
   # GitHub OAuth Routes
@@ -52,13 +52,26 @@ defmodule TermProjectWeb.AuthController do
     redirect(conn, external: Ueberauth.Strategy.Helpers.callback_url(conn))
   end
 
-  def callback(%{assigns: %{ueberauth_auth: %Ueberauth.Auth{info: info, credentials: credentials}}} = conn, _params) do
+  def single_word(string) do
+    string
+    |> String.trim()
+    |> String.split(~r/\s+/)
+    |> List.first()
+  end
+
+  def callback(
+        %{assigns: %{ueberauth_auth: %Ueberauth.Auth{info: info, credentials: credentials}}} =
+          conn,
+        _params
+      ) do
     IO.inspect(info)
     IO.puts("callback for oauth")
     auth_provider = nil
+
     if info.image == nil do
       auth_provider = "github"
     end
+
     user_params = %{
       email: info.email,
       full_name: info.name || info.nickname || info.first_name || "oauth user",
@@ -71,7 +84,7 @@ defmodule TermProjectWeb.AuthController do
         conn
         |> put_session(:user_id, user.id)
         |> put_flash(:info, "Welcome #{user.full_name}!")
-        |> redirect(to: "/login")
+        |> redirect(to: "/?username=#{single_word(user.full_name)}")
 
       {:error, _reason} ->
         conn
