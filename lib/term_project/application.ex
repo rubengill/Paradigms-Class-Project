@@ -16,6 +16,8 @@ defmodule TermProject.Application do
       # Start the Endpoint (http/https)
       TermProjectWeb.Endpoint,
       # Start the Game server
+      {TermProject.Game, :test_match_id},
+      # Start the Game server
       TermProject.Game.LobbyServer
     ]
 

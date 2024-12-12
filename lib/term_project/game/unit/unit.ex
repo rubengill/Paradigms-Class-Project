@@ -1,10 +1,10 @@
-defmodule TermProject.Game.Unit do
+defmodule TermProject.Unit do
   @moduledoc """
-  Behaviour defining the interface for all unit types.
+  Behaviour for defining units in the game.
   """
 
-  @callback init(opts :: keyword()) :: map()
-  @callback move(unit :: map()) :: map()
-  @callback attack(unit :: map(), target :: map()) :: {map(), map()}
-  @callback in_range?(unit :: map(), target :: map()) :: boolean()
+  @callback type() :: atom()
+  @callback stats() :: %{health: integer(), damage: integer(), range: integer()}
+  @callback attack(target :: map()) :: map()
+  @callback in_range?(unit_position :: {integer(), integer()}, target_position :: {integer(), integer()}) :: boolean()
 end
