@@ -10,13 +10,16 @@ defmodule TermProject.Game do
   alias TermProject.Game.LobbyServer
   alias Phoenix.PubSub
 
+  @tick_rate 100
+
   # Public API
 
   @doc """
   Starts a new game instance for a specific lobby_id.
   """
-  def start_link(%{lobby_id: lobby_id, players: _player_mapping} = init_args) do
-    GenServer.start_link(__MODULE__, init_args, name: {:global, {:game_server, lobby_id}})
+  def start_link(%{lobby_id: lobby_id, players: players}) do
+    GenServer.start_link(__MODULE__, %{lobby_id: lobby_id, players: players},
+      name: {:global, {:game_server, lobby_id}})
   end
 
   @doc """
@@ -76,8 +79,15 @@ defmodule TermProject.Game do
   end
 
   @impl true
-  def handle_call({:spawn_unit, unit_type, _player_id}, _from, state) do
-    updated_game_state = GameState.apply_action(state.game_state, {:create_unit, unit_type})
+  def handle_call({:spawn_unit, unit_type, player_id}, _from, state) do
+    unit = %{
+      type: unit_type,
+      position: if(player_id == 1, do: %{x: 100, y: 300}, else: %{x: 900, y: 300}),
+      owner: player_id
+    }
+
+    updated_game_state = %{state.game_state | units: [unit | state.game_state.units]}
+
     broadcast_game_update(state.lobby_id, updated_game_state)
     {:reply, :ok, %{state | game_state: updated_game_state}}
   end
@@ -85,6 +95,12 @@ defmodule TermProject.Game do
   @impl true
   def handle_call(:get_state, _from, state) do
     {:reply, state.game_state, state}
+  end
+
+  @impl true
+  def handle_info({:game_state_update, updated_game_state}, state) do
+    # Simply update the state with the new game state
+    {:noreply, %{state | game_state: updated_game_state}}
   end
 
   @impl true
@@ -96,14 +112,18 @@ defmodule TermProject.Game do
 
   @impl true
   def handle_info(:game_started, state) do
-    # Update state if needed at game start
     {:noreply, state}
   end
 
   @impl true
   def handle_info(:game_ended, state) do
-    # Clean up game state if necessary
     {:stop, :normal, state}
+  end
+
+  @impl true
+  def handle_info(unknown_message, state) do
+    IO.warn("Received unknown message in Game server: #{inspect(unknown_message)}")
+    {:noreply, state}
   end
 
   # Private Helpers

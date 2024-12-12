@@ -61,38 +61,38 @@ defmodule TermProjectWeb.GameLive do
         <div class="status-panel">
           <div class="resources">
             <div>Wood: <%= @game_state.resources.amounts.wood %></div>
-            
+
             <div>Stone: <%= @game_state.resources.amounts.stone %></div>
-            
+
             <div>Iron: <%= @game_state.resources.amounts.iron %></div>
           </div>
-          
+
           <div class="bases">
             <div>Base 1: <%= @game_state.bases[1].health %></div>
-            
+
             <div>Base 2: <%= @game_state.bases[2].health %></div>
           </div>
         </div>
-        
+
         <div class="game-controls">
           <button phx-click="spawn_unit" phx-value-type="archer" class="unit-button">
             Spawn Archer
           </button>
-          
+
           <button phx-click="spawn_unit" phx-value-type="soldier" class="unit-button">
             Spawn Soldier
           </button>
-          
+
           <button phx-click="spawn_unit" phx-value-type="cavalry" class="unit-button">
             Spawn Cavalry
           </button>
         </div>
-        
+
         <div class="game-field">
           <div class="base left-base">Player 1 Base</div>
-          
+
           <div class="base right-base">Player 2 Base</div>
-          
+
           <%= for unit <- @game_state.units do %>
             <div
               class={"unit #{unit.type}"}
@@ -109,14 +109,13 @@ defmodule TermProjectWeb.GameLive do
 
   @impl true
   def handle_event("spawn_unit", %{"type" => type}, socket) do
-    with {:ok, unit_type} <- validate_unit_type(type),
-         player_id when not is_nil(player_id) <- socket.assigns.player_id,
-         :ok <- Game.spawn_unit(socket.assigns.lobby_id, unit_type, player_id) do
-      {:noreply, socket}
-    else
-      nil -> {:noreply, put_flash(socket, :error, "Player not assigned")}
-      {:error, reason} -> {:noreply, put_flash(socket, :error, "Could not spawn unit: #{reason}")}
-    end
+    Game.spawn_unit(
+      socket.assigns.lobby_id,
+      String.to_atom(type),
+      socket.assigns.player_id
+    )
+
+    {:noreply, socket}
   end
 
   @impl true
