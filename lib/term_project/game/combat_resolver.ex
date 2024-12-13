@@ -47,9 +47,10 @@ defmodule TermProject.Game.CombatResolver do
     case unit_type do
       :archer -> {:ok, TermProject.Game.UnitTypes.Archer}
       :cavalry -> {:ok, TermProject.Game.UnitTypes.Cavalry}
-      :knight -> {:ok, TermProject.Game.UnitTypes.Knight}
+      :soldier -> {:ok, TermProject.Game.UnitTypes.Soldier}
       # TODO: Add other unit types here
       _ -> :error
     end
   end
+
 end
