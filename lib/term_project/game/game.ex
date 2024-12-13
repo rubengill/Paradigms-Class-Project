@@ -121,7 +121,7 @@ defmodule TermProject.Game do
   @impl true
   def handle_info(:tick, %{game_state: game_state, lobby_id: lobby_id} = state) do
     updated_game_state = game_state
-      |> GameState.auto_update_resources()  # Re-add resource updates
+      |> GameState.auto_update_resources()
       |> update_unit_positions(lobby_id)
       |> update_combat()
 
@@ -137,7 +137,7 @@ defmodule TermProject.Game do
 
   @impl true
   def handle_info({:combat_event, message}, state) do
-    # Just broadcast combat events, don't update state
+    # Broadcast the combat event and update game state
     broadcast_combat_event(state.lobby_id, message)
     {:noreply, state}
   end
@@ -177,10 +177,14 @@ defmodule TermProject.Game do
   defp get_base_position(2), do: %{x: 1000, y: 300.0}
 
   defp update_unit_positions(game_state, lobby_id) do
-    updated_units = Enum.map(game_state.units, fn unit ->
-      process_unit(unit, game_state, lobby_id)
+    # Track state through unit updates
+    Enum.reduce(game_state.units, game_state, fn unit, current_state ->
+      {updated_unit, updated_state} = process_unit(unit, current_state, lobby_id)
+
+      %{updated_state |
+        units: replace_unit(updated_state.units, updated_unit)
+      }
     end)
-    %{game_state | units: updated_units}
   end
 
   defp process_unit(unit, game_state, lobby_id) do
@@ -190,20 +194,20 @@ defmodule TermProject.Game do
       {:unit, enemy} ->
         if check_range(unit, enemy.position, unit.range) do
           {updated_unit, updated_game_state} = attack_unit(unit, enemy, game_state, lobby_id)
-          updated_unit
+          # Return both unit and game state updates
+          {updated_unit, updated_game_state}
         else
-          move_unit(unit, game_state)
+          {move_unit(unit, game_state), game_state}
         end
 
       {:base, base_pos} ->
         if check_range(unit, base_pos, unit.range) do
-          {updated_unit, _} = attack_base(unit, game_state, lobby_id)
-          updated_unit
+          attack_base(unit, game_state, lobby_id)
         else
-          move_unit(unit, game_state)
+          {move_unit(unit, game_state), game_state}
         end
 
-      _ -> move_unit(unit, game_state)
+      _ -> {move_unit(unit, game_state), game_state}
     end
   end
 
@@ -213,34 +217,49 @@ defmodule TermProject.Game do
     :math.sqrt(dx * dx + dy * dy) <= range
   end
 
-  defp attack_unit(unit, target, game_state, lobby_id) do
-    if can_attack?(unit) do
+  defp attack_unit(attacker, target, game_state, lobby_id) do
+    if can_attack?(attacker) do
       current_time = System.monotonic_time(:millisecond)
-      damage = unit.damage
 
-      # Calculate new target health
-      new_health = target.health - damage
+      # Calculate new health
+      new_health = target.health - attacker.damage
+
+      # Create updated target unit
       updated_target = %{target | health: new_health}
 
-      # Update game state
-      updated_units = game_state.units
-        |> Enum.map(fn u ->
-          if u.id == target.id, do: updated_target, else: u
-        end)
-        |> Enum.filter(fn u -> u.health > 0 end)
+      # Update game state and remove dead units
+      updated_game_state = %{game_state |
+        units: game_state.units
+          |> Enum.map(fn unit ->
+            cond do
+              unit.id == target.id && new_health <= 0 -> nil  # Remove dead unit
+              unit.id == target.id -> updated_target  # Update damaged unit
+              true -> unit  # Keep other units unchanged
+            end
+          end)
+          |> Enum.reject(&is_nil/1)  # Remove nil (dead) units
+      }
 
-      # Broadcast appropriate message
+      # Broadcast combat message
       message = if new_health <= 0 do
-        "#{unit.type} killed #{target.type}!"
+        "#{attacker.type} killed #{target.type}!"
       else
-        "#{unit.type} deals #{damage} damage to #{target.type}! (Health: #{new_health})"
+        "#{attacker.type} deals #{attacker.damage} damage to #{target.type}! (Health: #{new_health})"
       end
       broadcast_combat_event(lobby_id, message)
 
-      updated_game_state = %{game_state | units: updated_units}
-      {%{unit | last_attack: current_time}, updated_game_state}
+      # Return updated attacker and game state
+      {%{attacker | last_attack: current_time}, updated_game_state}
     else
-      {unit, game_state}
+      {attacker, game_state}
+    end
+  end
+
+  defp combat_message(attacker, target, new_health) do
+    if new_health <= 0 do
+      "#{attacker.type} killed #{target.type}!"
+    else
+      "#{attacker.type} deals #{attacker.damage} damage to #{target.type}! (Health: #{new_health})"
     end
   end
 
@@ -303,32 +322,35 @@ defmodule TermProject.Game do
     enemy_base_id = if unit.owner == 1, do: 2, else: 1
     base_pos = game_state.bases[enemy_base_id].position
 
-    # Find closest enemy unit
-    enemy_units = Enum.filter(game_state.units, fn other ->
-      other.owner != unit.owner && other.health > 0
-    end)
+    # Find closest enemy unit by distance and different owner
+    closest_enemy = game_state.units
+      |> Enum.filter(fn other ->
+        other.owner != unit.owner && other.health > 0 && other.id != unit.id
+      end)
+      |> Enum.min_by(fn enemy ->
+        dx = enemy.position.x - unit.position.x
+        dy = enemy.position.y - unit.position.y
+        :math.sqrt(dx * dx + dy * dy)
+      end, fn -> nil end)
 
-    closest_enemy = Enum.min_by(enemy_units, fn enemy ->
-      dx = enemy.position.x - unit.position.x
-      dy = enemy.position.y - unit.position.y
-      :math.sqrt(dx * dx + dy * dy)
-    end, fn -> nil end)
-
-    cond do
-      closest_enemy -> {:unit, closest_enemy}
-      true -> {:base, base_pos}
+    case closest_enemy do
+      nil -> {:base, base_pos}
+      enemy -> {:unit, enemy}
     end
   end
 
   defp update_combat(game_state) do
-    alive_units = Enum.filter(game_state.units, fn unit ->
-      unit.health > 0
-    end)
-    %{game_state | units: alive_units}
+    # Remove any units with health <= 0
+    %{game_state |
+      units: Enum.filter(game_state.units, fn unit ->
+        unit.health > 0
+      end)
+    }
   end
 
   defp replace_unit(units, updated_unit) do
-    Enum.map(units, fn unit ->
+    units
+    |> Enum.map(fn unit ->
       cond do
         unit.id == updated_unit.id && updated_unit.health <= 0 -> nil
         unit.id == updated_unit.id -> updated_unit

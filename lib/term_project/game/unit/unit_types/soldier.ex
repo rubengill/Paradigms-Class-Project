@@ -1,4 +1,4 @@
-defmodule TermProject.Units.Knight do
+defmodule TermProject.Units.Soldier do
   @behaviour TermProject.Unit
 
   @type t :: %__MODULE__{
@@ -9,10 +9,10 @@ defmodule TermProject.Units.Knight do
           owner: atom()
         }
 
-  defstruct type: :knight, health: 100, damage: 20, range: 1, owner: nil
+  defstruct type: :soldier, health: 100, damage: 20, range: 1, owner: nil
 
   @impl true
-  def type, do: :knight
+  def type, do: :soldier
 
   @impl true
   def stats do
@@ -25,7 +25,6 @@ defmodule TermProject.Units.Knight do
 
   @impl true
   def attack(%{owner: owner} = target, %{owner: attacker_owner} = attacker) when owner != attacker_owner do
-    # Reduce target's health by the Knight's damage
     %{target | health: target.health - attacker.damage}
   end
 
