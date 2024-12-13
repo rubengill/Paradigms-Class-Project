@@ -1,4 +1,4 @@
-<h1 align="center"> Term Project </h1>
+<h1 align="center"> Chaos Lane </h1>
 
 <p align="center">
   
@@ -28,7 +28,7 @@
 
 <h2 id="about-the-project"> :pencil: About The Project</h2>
 
-Term Project is an action-packed real-time multiplayer lane battle game where players face off on opposite ends of the battlefield. Spawn troops, manage resources, and unleash powerful abilities as you push through enemy defenses to destroy their base before they destroy yours!
+Chaos Lane is an action-packed real-time multiplayer lane battle game where players face off on opposite ends of the battlefield. Spawn troops, manage resources, and unleash powerful abilities as you push through enemy defenses to destroy their base before they destroy yours!
 
 Powered by the Phoenix Framework (Elixir for the backend) and JavaScript for the frontend, Term Project offers blazing-fast gameplay with real-time updates, smooth animations, and engaging strategic combat.
 
@@ -192,7 +192,9 @@ New stuff coming soon
 
 <h2 id="bugs"> 🐛 Known Bugs</h2>
 
-Too many to list
+Soilder Unit does not correctly spawn
+Users cannot exit a lobby without closing
+Sprites are not correctly attatched to units
 
 ![-------------------------------------------------------------------------](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/cloudy.png)
 
