@@ -30,7 +30,7 @@
 
 Chaos Lane is an action-packed real-time multiplayer lane battle game where players face off on opposite ends of the battlefield. Spawn troops, manage resources, and unleash powerful abilities as you push through enemy defenses to destroy their base before they destroy yours!
 
-Powered by the Phoenix Framework (Elixir for the backend) and JavaScript for the frontend, Term Project offers blazing-fast gameplay with real-time updates, smooth animations, and engaging strategic combat.
+Powered by the Phoenix Framework (Elixir for the backend) and JavaScript for the frontend, Chaos Lane offers blazing-fast gameplay with real-time updates, smooth animations, and engaging strategic combat.
 
 
 ![-------------------------------------------------------------------------](https://raw.githubusercontent.com/andreasbm/readme/master/assets/lines/cloudy.png)
@@ -38,7 +38,7 @@ Powered by the Phoenix Framework (Elixir for the backend) and JavaScript for the
 
 <h2 id="instructions"> :video_game: User Instructions</h2>
 
-Getting started with Term Project is simple. Here's how:
+Getting started with Chaos Lane is simple. Here's how:
 
 ### Authentication Process
 
